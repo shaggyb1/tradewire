@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "TradeWire",
+    "slug": "tradewire",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tradewire.news"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0F14",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.tradewire.news",
+      "permissions": [
+        "android.permission.INTERNET"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser",
+      "expo-status-bar",
+      "expo-background-task"
+    ],
+    "backgroundColor": "#0B0F14",
+    "extra": {
+      "eas": {
+        "projectId": "b7598245-3cfe-439a-9165-cdfc82be3551"
+      }
+    },
+    "owner": "calmverse"
+  }
+}
