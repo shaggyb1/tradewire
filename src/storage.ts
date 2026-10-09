@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NewsItem } from './feed';
+import { analyze } from './impact';
 import { DEFAULT_ENABLED, SOURCE_BY_ID } from './sources';
 
 // Everything is stored only on this phone. Nothing is ever uploaded.
@@ -41,7 +42,13 @@ export async function loadItems(): Promise<NewsItem[]> {
   try {
     const raw = await AsyncStorage.getItem(ITEMS_KEY);
     const items = raw ? (JSON.parse(raw) as NewsItem[]) : [];
-    return items.filter((i) => SOURCE_BY_ID[i.sourceId] && i.timeKind);
+    // Re-score with the current rules so cached items pick up rule changes
+    return items
+      .filter((i) => SOURCE_BY_ID[i.sourceId] && i.timeKind)
+      .map((i) => {
+        const src = SOURCE_BY_ID[i.sourceId];
+        return { ...i, impact: analyze(i.summary ? `${i.title} ${i.summary}` : i.title, src.kind, src.region) };
+      });
   } catch {
     return [];
   }

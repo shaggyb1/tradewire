@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import MoodBar from './src/components/MoodBar';
 import NewsCard from './src/components/NewsCard';
 import SettingsSheet from './src/components/SettingsSheet';
 import { disableAlerts, enableAlerts } from './src/alerts';
@@ -35,6 +36,8 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'High', label: '⚡ High impact' },
 ];
 
+const MOOD_WINDOW_MS = 24 * 3600 * 1000;
+
 function openLink(url: unknown) {
   if (typeof url !== 'string' || !/^https:\/\//i.test(url)) return;
   WebBrowser.openBrowserAsync(url, { toolbarColor: C.bg, controlsColor: C.accent }).catch(() => {});
@@ -51,6 +54,7 @@ function Main() {
   const [tab, setTab] = useState<Tab>('All');
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [toneFilter, setToneFilter] = useState<1 | -1 | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [ready, setReady] = useState(false);
 
@@ -162,7 +166,7 @@ function Main() {
     refresh(DEFAULT_SETTINGS.enabled);
   };
 
-  const visible = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return items.filter((i) => {
       const src = SOURCE_BY_ID[i.sourceId];
@@ -175,6 +179,23 @@ function Main() {
       return true;
     });
   }, [items, settings.enabled, sourceFilter, tab, query]);
+
+  // News mood over the last 24h of whatever the tabs/search currently show
+  const mood = useMemo(() => {
+    let up = 0;
+    let down = 0;
+    for (const i of filtered) {
+      if (now - i.time > MOOD_WINDOW_MS) continue;
+      if (i.impact.tone.dir > 0) up++;
+      else if (i.impact.tone.dir < 0) down++;
+    }
+    return { up, down };
+  }, [filtered, now]);
+
+  const visible = useMemo(
+    () => (toneFilter ? filtered.filter((i) => i.impact.tone.dir === toneFilter) : filtered),
+    [filtered, toneFilter],
+  );
 
   const newCount = useMemo(() => visible.filter((i) => newIds.has(i.id)).length, [visible, newIds]);
 
@@ -244,6 +265,8 @@ function Main() {
         </ScrollView>
       </View>
 
+      <MoodBar up={mood.up} down={mood.down} filter={toneFilter} onFilter={setToneFilter} />
+
       {newCount > 0 && (
         <Pressable
           style={styles.newBanner}
@@ -280,7 +303,7 @@ function Main() {
         }
         ListFooterComponent={
           visible.length > 0 ? (
-            <Text style={styles.footer}>Tap to open the source · long-press to share{'\n'}Impact tags are automatic, not advice.</Text>
+            <Text style={styles.footer}>Tap to open the source · long-press to share{'\n'}Tags and ▲▼ indicators are automatic, not advice.</Text>
           ) : null
         }
       />

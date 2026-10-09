@@ -13,6 +13,11 @@ export const C = {
   open: '#3FB950',
   chip: '#1A2330',
   chipActive: '#2B4B73',
+  bull: '#3FB950',
+  bullBg: '#12261A',
+  bear: '#FF6B6B',
+  bearBg: '#2D1517',
+  mixedBg: '#1E2329',
 };
 
 export const LEVEL_COLOR = [C.none, C.low, C.med, C.high];

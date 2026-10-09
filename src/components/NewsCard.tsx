@@ -15,7 +15,11 @@ interface Props {
 
 function NewsCard({ item, now, isNew, onOpen, onShare }: Props) {
   const src = SOURCE_BY_ID[item.sourceId];
-  const { level, tags, sectors } = item.impact;
+  const { level, tags, sectors, tone } = item.impact;
+  const showTone = tone.dir !== 0 || tone.mixed;
+  const toneColor = tone.dir > 0 ? C.bull : tone.dir < 0 ? C.bear : C.muted;
+  const toneLabel =
+    tone.dir > 0 ? `▲ ${tone.strength === 2 ? 'Strongly ' : ''}Bullish` : tone.dir < 0 ? `▼ ${tone.strength === 2 ? 'Strongly ' : ''}Bearish` : '◆ Mixed signals';
   return (
     <Pressable
       onPress={() => onOpen(item)}
@@ -42,6 +46,23 @@ function NewsCard({ item, now, isNew, onOpen, onShare }: Props) {
           <Text style={styles.summary} numberOfLines={3}>
             {item.summary}
           </Text>
+        )}
+
+        {showTone && (
+          <View
+            style={[styles.tone, { backgroundColor: tone.dir > 0 ? C.bullBg : tone.dir < 0 ? C.bearBg : C.mixedBg }]}
+            accessibilityLabel={`News tone: ${toneLabel}. ${tone.reasons.join('. ')}`}
+          >
+            <Text style={[styles.toneLabel, { color: toneColor }]}>
+              {toneLabel}
+              {tone.mixed && tone.dir !== 0 ? ' (mixed)' : ''}
+            </Text>
+            {tone.reasons.map((r) => (
+              <Text key={r} style={styles.toneWhy}>
+                {r}
+              </Text>
+            ))}
+          </View>
         )}
 
         {tags.length > 0 && (
@@ -103,4 +124,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   sectors: { color: C.faint, fontSize: 11 },
+  tone: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, gap: 2 },
+  toneLabel: { fontSize: 13, fontWeight: '800' },
+  toneWhy: { color: C.muted, fontSize: 12 },
 });

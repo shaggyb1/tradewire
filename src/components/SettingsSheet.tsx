@@ -114,8 +114,11 @@ export default function SettingsSheet({ visible, settings, errors, onChange, onC
 
           <Text style={styles.h2}>Disclaimer</Text>
           <Text style={styles.p}>
-            Impact levels and sensitive sectors are automatic keyword tags to help you triage headlines. They are not
-            investment advice and can be wrong. Always read the original source before trading.
+            Impact levels, sensitive sectors and the Bullish / Bearish indicator are automatic keyword tags. They show
+            how this kind of news has typically moved Indian markets, based only on the headline's wording. They do not
+            know prices, what is already priced in, or your situation, and they can be wrong.{'\n\n'}
+            They are not investment advice or buy/sell signals. Always read the original source and do your own
+            research, or consult a SEBI-registered adviser, before trading.
           </Text>
         </ScrollView>
       </SafeAreaView>

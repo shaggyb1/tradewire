@@ -2,7 +2,7 @@
   "expo": {
     "name": "TradeWire",
     "slug": "tradewire",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -21,7 +21,8 @@
       "package": "com.tradewire.news",
       "permissions": [
         "android.permission.INTERNET"
-      ]
+      ],
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/favicon.png"

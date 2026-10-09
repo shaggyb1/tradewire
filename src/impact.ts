@@ -1,4 +1,5 @@
-import type { Kind } from './sources';
+import type { Kind, Region } from './sources';
+import { analyzeTone, type Tone } from './tone';
 
 /** 0 = untagged, 1 = low, 2 = medium, 3 = high */
 export type Level = 0 | 1 | 2 | 3;
@@ -7,6 +8,7 @@ export interface Impact {
   level: Level;
   tags: string[];
   sectors: string[];
+  tone: Tone;
 }
 
 interface Rule {
@@ -40,7 +42,7 @@ const RULES: Rule[] = [
   { tag: 'Mgmt change', level: 1, re: /\b(resignation|appointment of (CEO|MD|CFO)|cessation)\b/i, onlyKinds: ['Exchange'] },
 ];
 
-export function analyze(text: string, kind: Kind): Impact {
+export function analyze(text: string, kind: Kind, region: Region): Impact {
   let level: Level = 0;
   const tags: string[] = [];
   const sectors = new Set<string>();
@@ -51,5 +53,5 @@ export function analyze(text: string, kind: Kind): Impact {
     if (r.level > level) level = r.level;
     r.sectors?.forEach((s) => sectors.add(s));
   }
-  return { level, tags: tags.slice(0, 4), sectors: [...sectors].slice(0, 5) };
+  return { level, tags: tags.slice(0, 4), sectors: [...sectors].slice(0, 5), tone: analyzeTone(text, region === 'India') };
 }

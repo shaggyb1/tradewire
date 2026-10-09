@@ -148,7 +148,7 @@ export function parseFeed(xml: string, src: Source, now = Date.now()): NewsItem[
       link,
       time,
       timeKind,
-      impact: analyze(body, src.kind),
+      impact: analyze(body, src.kind, src.region),
     });
   }
   return items;
