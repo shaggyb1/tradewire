@@ -43,5 +43,3 @@ yarn-error.*
 # local Claude Code settings
 .claude/
 
-# old duplicate copy from the project move
-/TradeWire/
