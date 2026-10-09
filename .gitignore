@@ -43,3 +43,6 @@ yarn-error.*
 # local Claude Code settings
 .claude/
 
+
+# local copies of built APKs (published on GitHub Releases)
+apk/
