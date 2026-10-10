@@ -1,8 +1,10 @@
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SOURCES, type Source } from '../sources';
 import type { Settings } from '../storage';
 import { C } from '../theme';
+import { normalizeTerm } from '../watchlist';
 
 interface Props {
   visible: boolean;
@@ -31,6 +33,14 @@ export default function SettingsSheet({ visible, settings, errors, onChange, onC
   const toggle = (id: string, on: boolean) =>
     onChange({ ...settings, enabled: on ? [...settings.enabled, id] : settings.enabled.filter((x) => x !== id) });
 
+  const [draft, setDraft] = useState('');
+  const addTerm = () => {
+    const term = normalizeTerm(draft);
+    setDraft('');
+    if (!term || settings.watchlist.some((t) => t.toLowerCase() === term.toLowerCase())) return;
+    onChange({ ...settings, watchlist: [...settings.watchlist, term] });
+  };
+
   const confirmClear = () =>
     Alert.alert('Clear all data?', 'Removes cached news and settings from this phone.', [
       { text: 'Cancel', style: 'cancel' },
@@ -46,7 +56,42 @@ export default function SettingsSheet({ visible, settings, errors, onChange, onC
             <Text style={styles.done}>Done</Text>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Text style={styles.h2}>★ Watchlist</Text>
+          <Text style={styles.p}>
+            Stocks or topics you trade. Matching news is starred, gets its own tab, and their results dates show in the
+            calendar. Use the name as companies write it, e.g. “Reliance”, “HDFC Bank”, “Tata Motors”, or topics like
+            “crude”.
+          </Text>
+          <View style={[styles.row, { marginTop: 8 }]}>
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              onSubmitEditing={addTerm}
+              placeholder="Add stock or topic"
+              placeholderTextColor={C.faint}
+              style={styles.input}
+              autoCorrect={false}
+              returnKeyType="done"
+            />
+            <Pressable onPress={addTerm} style={[styles.chip, styles.chipOn]}>
+              <Text style={styles.chipText}>Add</Text>
+            </Pressable>
+          </View>
+          <View style={[styles.row, { flexWrap: 'wrap', marginTop: 8 }]}>
+            {settings.watchlist.map((t) => (
+              <Pressable
+                key={t}
+                onPress={() => onChange({ ...settings, watchlist: settings.watchlist.filter((x) => x !== t) })}
+                style={styles.chip}
+                accessibilityLabel={`Remove ${t} from watchlist`}
+              >
+                <Text style={styles.chipText}>★ {t}  ✕</Text>
+              </Pressable>
+            ))}
+            {!settings.watchlist.length && <Text style={styles.sub}>Nothing added yet.</Text>}
+          </View>
+
           <Text style={styles.h2}>Auto-refresh</Text>
           <View style={styles.row}>
             {INTERVALS.map((s) => (
@@ -76,6 +121,17 @@ export default function SettingsSheet({ visible, settings, errors, onChange, onC
               </Pressable>
             ))}
           </View>
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Only alert for my watchlist</Text>
+              <Text style={styles.sub}>Watchlist news always alerts (any impact) while alerts are on</Text>
+            </View>
+            <Switch
+              value={settings.watchOnlyAlerts}
+              onValueChange={(v) => onChange({ ...settings, watchOnlyAlerts: v })}
+              disabled={settings.alertLevel === 0}
+            />
+          </View>
           <Text style={[styles.p, { marginTop: 8 }]}>
             The phone checks in the background about every 15 minutes at best. Android and iOS decide the exact timing
             and may check less often to save battery, so alerts are not instant. Keep the app open for live updates.
@@ -99,6 +155,20 @@ export default function SettingsSheet({ visible, settings, errors, onChange, onC
           ))}
 
           <Text style={styles.h2}>Privacy</Text>
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>App lock</Text>
+              <Text style={styles.sub}>Fingerprint, face or phone PIN to open. Alerts hide headlines.</Text>
+            </View>
+            <Switch value={settings.lockEnabled} onValueChange={(v) => onChange({ ...settings, lockEnabled: v })} />
+          </View>
+          <View style={[styles.switchRow, { marginBottom: 12 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Hide screen</Text>
+              <Text style={styles.sub}>Blocks screenshots and blanks the app in recent apps</Text>
+            </View>
+            <Switch value={settings.hideScreen} onValueChange={(v) => onChange({ ...settings, hideScreen: v })} />
+          </View>
           <Text style={styles.p}>
             • No account, no login, no analytics, no ads, no tracking SDKs.{'\n'}
             • No middle server: your phone fetches each feed directly from the official website over HTTPS.{'\n'}
@@ -115,7 +185,7 @@ export default function SettingsSheet({ visible, settings, errors, onChange, onC
           <Text style={styles.h2}>Disclaimer</Text>
           <Text style={styles.p}>
             Impact levels, sensitive sectors and the Bullish / Bearish indicator are automatic keyword tags. They show
-            how this kind of news has typically moved Indian markets, based only on the headline's wording. They do not
+            how this kind of news has typically moved Indian markets, based only on the headline’s wording. They do not
             know prices, what is already priced in, or your situation, and they can be wrong.{'\n\n'}
             They are not investment advice or buy/sell signals. Always read the original source and do your own
             research, or consult a SEBI-registered adviser, before trading.
@@ -137,6 +207,7 @@ const styles = StyleSheet.create({
   chip: { backgroundColor: C.chip, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16 },
   chipOn: { backgroundColor: C.chipActive },
   chipText: { color: C.text, fontWeight: '600' },
+  input: { flex: 1, backgroundColor: C.card, color: C.text, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 15 },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',

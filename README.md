@@ -10,6 +10,7 @@ All tags and indicators are keyword-based triage from headline wording. They are
 
 | Version | What's new |
 |---|---|
+| 1.2.0 | ★ Watchlist, 📅 market calendar (RBI, Fed, CPI/IIP/GDP, F&O expiries, holidays, watchlist results), app lock, hidden screen, NSE holiday-aware market status |
 | 1.1.0 | Bullish / Bearish indicator, 24h news-mood gauge |
 | 1.0.0 | First release: official feeds, impact tags, background alerts |
 

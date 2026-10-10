@@ -9,11 +9,13 @@ interface Props {
   item: NewsItem;
   now: number;
   isNew: boolean;
+  /** Watchlist term this item matches, if any */
+  watched: string | null;
   onOpen: (item: NewsItem) => void;
   onShare: (item: NewsItem) => void;
 }
 
-function NewsCard({ item, now, isNew, onOpen, onShare }: Props) {
+function NewsCard({ item, now, isNew, watched, onOpen, onShare }: Props) {
   const src = SOURCE_BY_ID[item.sourceId];
   const { level, tags, sectors, tone } = item.impact;
   const showTone = tone.dir !== 0 || tone.mixed;
@@ -24,7 +26,7 @@ function NewsCard({ item, now, isNew, onOpen, onShare }: Props) {
     <Pressable
       onPress={() => onOpen(item)}
       onLongPress={() => onShare(item)}
-      style={({ pressed }) => [styles.card, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [styles.card, !!watched && styles.cardWatched, pressed && { opacity: 0.7 }]}
       accessibilityRole="link"
     >
       <View style={[styles.bar, { backgroundColor: LEVEL_COLOR[level] }]} />
@@ -32,6 +34,7 @@ function NewsCard({ item, now, isNew, onOpen, onShare }: Props) {
         <View style={styles.metaRow}>
           <Text style={[styles.badge, !src.official && styles.badgeMedia]}>{src.short}</Text>
           {!src.official && <Text style={styles.mediaTag}>MEDIA</Text>}
+          {!!watched && <Text style={styles.watchTag}>★ {watched}</Text>}
           {isNew && <Text style={styles.newTag}>NEW</Text>}
           {level > 0 && (
             <Text style={[styles.level, { color: LEVEL_COLOR[level] }]}>● {LEVEL_LABEL[level]}</Text>
@@ -93,6 +96,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     overflow: 'hidden',
   },
+  cardWatched: { borderColor: C.accent, borderWidth: 1 },
+  watchTag: { color: C.accent, fontSize: 11, fontWeight: '800', flexShrink: 1 },
   bar: { width: 4 },
   body: { flex: 1, padding: 12, gap: 6 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

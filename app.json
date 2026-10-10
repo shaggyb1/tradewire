@@ -2,7 +2,7 @@
   "expo": {
     "name": "TradeWire",
     "slug": "tradewire",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -22,7 +22,7 @@
       "permissions": [
         "android.permission.INTERNET"
       ],
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,7 +30,13 @@
     "plugins": [
       "expo-web-browser",
       "expo-status-bar",
-      "expo-background-task"
+      "expo-background-task",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID to unlock the app."
+        }
+      ]
     ],
     "backgroundColor": "#0B0F14",
     "extra": {

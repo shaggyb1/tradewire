@@ -13,6 +13,14 @@ export interface Settings {
   keepAwake: boolean;
   /** Background alerts: 0 = off, 2 = medium and high, 3 = high only */
   alertLevel: 0 | 2 | 3;
+  /** Stocks / topics to highlight, e.g. "Reliance", "crude" */
+  watchlist: string[];
+  /** When alerts are on: alert only for watchlist news (any impact) */
+  watchOnlyAlerts: boolean;
+  /** Require fingerprint / face / phone PIN to open the app */
+  lockEnabled: boolean;
+  /** Block screenshots and blank the app in the recent-apps view */
+  hideScreen: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -20,6 +28,10 @@ export const DEFAULT_SETTINGS: Settings = {
   intervalSec: 60,
   keepAwake: false,
   alertLevel: 0,
+  watchlist: [],
+  watchOnlyAlerts: false,
+  lockEnabled: false,
+  hideScreen: true,
 };
 
 export async function loadSettings(): Promise<Settings> {

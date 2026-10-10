@@ -1,12 +1,14 @@
 import { StatusBar } from 'expo-status-bar';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as Notifications from 'expo-notifications';
+import * as ScreenCapture from 'expo-screen-capture';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   AppState,
   FlatList,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,26 +19,33 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import CalendarSheet from './src/components/CalendarSheet';
+import LockScreen from './src/components/LockScreen';
 import MoodBar from './src/components/MoodBar';
 import NewsCard from './src/components/NewsCard';
 import SettingsSheet from './src/components/SettingsSheet';
 import { disableAlerts, enableAlerts } from './src/alerts';
 import { fetchSource, type NewsItem } from './src/feed';
+import { authenticate, canLock } from './src/lock';
 import { merge } from './src/merge';
 import { SOURCE_BY_ID, SOURCES } from './src/sources';
 import { clearAll, DEFAULT_SETTINGS, loadItems, loadSettings, saveItems, saveSettings, type Settings } from './src/storage';
 import { C } from './src/theme';
 import { istClock, nseState } from './src/time';
+import { matchWatch } from './src/watchlist';
 
-type Tab = 'All' | 'India' | 'Global' | 'High';
+type Tab = 'All' | 'India' | 'Global' | 'High' | 'Watch';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'All', label: 'All' },
   { key: 'India', label: '🇮🇳 India' },
   { key: 'Global', label: '🌐 Global' },
-  { key: 'High', label: '⚡ High impact' },
+  { key: 'High', label: '⚡ High' },
+  { key: 'Watch', label: '★ Watch' },
 ];
 
 const MOOD_WINDOW_MS = 24 * 3600 * 1000;
+/** Re-lock after the app has been in the background this long (allows opening articles). */
+const RELOCK_AFTER_MS = 60 * 1000;
 
 function openLink(url: unknown) {
   if (typeof url !== 'string' || !/^https:\/\//i.test(url)) return;
@@ -56,11 +65,16 @@ function Main() {
   const [query, setQuery] = useState('');
   const [toneFilter, setToneFilter] = useState<1 | -1 | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [locked, setLocked] = useState(false);
   const [ready, setReady] = useState(false);
 
   const itemsRef = useRef<NewsItem[]>([]);
   const busy = useRef(false);
   const listRef = useRef<FlatList<NewsItem>>(null);
+  const lockedRef = useRef(false);
+  const pendingLink = useRef<unknown>(null);
+  lockedRef.current = locked;
 
   const refresh = useCallback(async (enabled: string[]) => {
     if (busy.current) return;
@@ -95,6 +109,7 @@ function Main() {
       itemsRef.current = cached;
       setItems(cached);
       setSettings(s);
+      if (s.lockEnabled) setLocked(true);
       setReady(true);
       refresh(s.enabled);
       // Re-register in case the OS dropped the task (e.g. after an app update)
@@ -127,12 +142,51 @@ function Main() {
     else deactivateKeepAwake('desk').catch(() => {});
   }, [settings.keepAwake]);
 
-  // Tapping an alert opens its article (also when the tap launched the app)
+  // Re-lock after time in the background
   useEffect(() => {
+    if (!settings.lockEnabled) return;
+    let bgAt = 0;
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'background') bgAt = Date.now();
+      else if (st === 'active' && bgAt && Date.now() - bgAt > RELOCK_AFTER_MS) {
+        setShowSettings(false);
+        setShowCalendar(false);
+        setLocked(true);
+      }
+    });
+    return () => sub.remove();
+  }, [settings.lockEnabled]);
+
+  // Block screenshots; on Android this also blanks the recent-apps preview
+  useEffect(() => {
+    if (settings.hideScreen) {
+      ScreenCapture.preventScreenCaptureAsync('tw').catch(() => {});
+      if (Platform.OS === 'ios') ScreenCapture.enableAppSwitcherProtectionAsync(0.9).catch(() => {});
+    } else {
+      ScreenCapture.allowScreenCaptureAsync('tw').catch(() => {});
+      if (Platform.OS === 'ios') ScreenCapture.disableAppSwitcherProtectionAsync().catch(() => {});
+    }
+  }, [settings.hideScreen]);
+
+  const unlock = useCallback(async () => {
+    if (!(await authenticate())) return;
+    setLocked(false);
+    if (pendingLink.current) {
+      openLink(pendingLink.current);
+      pendingLink.current = null;
+    }
+  }, []);
+
+  // Tapping an alert opens its article (also when the tap launched the app); waits for unlock if locked
+  useEffect(() => {
+    const open = (url: unknown) => {
+      if (lockedRef.current) pendingLink.current = url;
+      else openLink(url);
+    };
     const last = Notifications.getLastNotificationResponse();
-    if (last) openLink(last.notification.request.content.data?.url);
+    if (last) open(last.notification.request.content.data?.url);
     const sub = Notifications.addNotificationResponseReceivedListener((r) => {
-      if (r.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) openLink(r.notification.request.content.data?.url);
+      if (r.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) open(r.notification.request.content.data?.url);
     });
     return () => sub.remove();
   }, []);
@@ -150,6 +204,14 @@ function Main() {
         }
       }
     }
+    if (s.lockEnabled && !settings.lockEnabled) {
+      if (!(await canLock())) {
+        Alert.alert('Set up a screen lock first', 'Add a fingerprint, face, PIN or pattern in your phone settings, then turn on App lock.');
+        s = { ...s, lockEnabled: false };
+      } else if (!(await authenticate('Confirm to turn on app lock'))) {
+        s = { ...s, lockEnabled: false };
+      }
+    }
     setSettings(s);
     saveSettings(s).catch(() => {});
     if (newlyEnabled) refresh(s.enabled);
@@ -162,9 +224,20 @@ function Main() {
     setItems([]);
     setNewIds(new Set());
     setSettings(DEFAULT_SETTINGS);
+    setLocked(false);
     setShowSettings(false);
     refresh(DEFAULT_SETTINGS.enabled);
   };
+
+  const watchMap = useMemo(() => {
+    const m = new Map<string, string>();
+    if (!settings.watchlist.length) return m;
+    for (const i of items) {
+      const term = matchWatch(`${i.title} ${i.summary}`, settings.watchlist);
+      if (term) m.set(i.id, term);
+    }
+    return m;
+  }, [items, settings.watchlist]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -175,10 +248,11 @@ function Main() {
       if (tab === 'India' && src.region !== 'India') return false;
       if (tab === 'Global' && src.region !== 'Global') return false;
       if (tab === 'High' && i.impact.level < 3) return false;
+      if (tab === 'Watch' && !watchMap.has(i.id)) return false;
       if (q && !`${i.title} ${i.summary} ${src.name} ${i.impact.tags.join(' ')}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [items, settings.enabled, sourceFilter, tab, query]);
+  }, [items, settings.enabled, sourceFilter, tab, query, watchMap]);
 
   // News mood over the last 24h of whatever the tabs/search currently show
   const mood = useMemo(() => {
@@ -222,7 +296,18 @@ function Main() {
           </Text>
         </View>
         <View style={styles.headerRight}>
-          <Text style={[styles.market, market === 'Open' && { color: C.open, borderColor: C.open }]}>NSE {market}</Text>
+          <Text
+            style={[
+              styles.market,
+              market === 'Open' && { color: C.open, borderColor: C.open },
+              market === 'Holiday' && { color: C.bear, borderColor: C.bear },
+            ]}
+          >
+            NSE {market}
+          </Text>
+          <Pressable onPress={() => setShowCalendar(true)} hitSlop={12} accessibilityLabel="Market calendar">
+            <Text style={styles.gear}>📅</Text>
+          </Pressable>
           <Pressable onPress={() => setShowSettings(true)} hitSlop={12} accessibilityLabel="Settings">
             <Text style={styles.gear}>⚙︎</Text>
           </Pressable>
@@ -284,7 +369,14 @@ function Main() {
         data={visible}
         keyExtractor={(i) => i.id}
         renderItem={({ item }) => (
-          <NewsCard item={item} now={now} isNew={newIds.has(item.id)} onOpen={onOpen} onShare={onShare} />
+          <NewsCard
+            item={item}
+            now={now}
+            isNew={newIds.has(item.id)}
+            watched={watchMap.get(item.id) ?? null}
+            onOpen={onOpen}
+            onShare={onShare}
+          />
         )}
         contentContainerStyle={{ paddingTop: 4, paddingBottom: 32 }}
         refreshControl={
@@ -299,7 +391,13 @@ function Main() {
         initialNumToRender={12}
         windowSize={9}
         ListEmptyComponent={
-          <Text style={styles.empty}>{loading || !ready ? 'Fetching from official sources…' : 'No matching news.'}</Text>
+          <Text style={styles.empty}>
+            {loading || !ready
+              ? 'Fetching from official sources…'
+              : tab === 'Watch' && !settings.watchlist.length
+                ? 'Your watchlist is empty.\nAdd stocks or topics in ⚙︎ Settings.'
+                : 'No matching news.'}
+          </Text>
         }
         ListFooterComponent={
           visible.length > 0 ? (
@@ -316,6 +414,17 @@ function Main() {
         onClearData={onClearData}
         onClose={() => setShowSettings(false)}
       />
+
+      <CalendarSheet
+        visible={showCalendar}
+        now={now}
+        items={items}
+        watchlist={settings.watchlist}
+        onOpenLink={openLink}
+        onClose={() => setShowCalendar(false)}
+      />
+
+      {locked && <LockScreen onUnlock={unlock} />}
     </SafeAreaView>
   );
 }
@@ -333,14 +442,14 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 },
   logo: { color: C.text, fontSize: 22, fontWeight: '800', letterSpacing: 0.3 },
   updated: { color: C.muted, fontSize: 12, marginTop: 2 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   market: { color: C.muted, fontSize: 11, fontWeight: '700', borderColor: C.none, borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   gear: { color: C.text, fontSize: 24 },
   search: { backgroundColor: C.card, color: C.text, marginHorizontal: 12, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 15 },
   tabs: { flexDirection: 'row', marginHorizontal: 12, marginTop: 10, backgroundColor: C.card, borderRadius: 10, padding: 3 },
   tab: { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 8 },
   tabOn: { backgroundColor: C.chipActive },
-  tabText: { color: C.muted, fontSize: 12, fontWeight: '600' },
+  tabText: { color: C.muted, fontSize: 11, fontWeight: '600' },
   chips: { paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
   chip: { backgroundColor: C.chip, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14 },
   chipOn: { backgroundColor: C.chipActive },

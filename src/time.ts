@@ -1,3 +1,4 @@
+import { istDate, NSE_HOLIDAYS } from './calendar';
 import type { NewsItem } from './feed';
 
 const IST_OFFSET_MS = 330 * 60000;
@@ -37,13 +38,14 @@ export function itemTime(item: NewsItem, now: number): string {
   return `${ago(item.time, now)} · ${sameDay ? '' : istDay(item.time) + ' '}${istClock(item.time)} IST`;
 }
 
-export type MarketState = 'Open' | 'Pre-open' | 'Closed' | 'Weekend';
+export type MarketState = 'Open' | 'Pre-open' | 'Closed' | 'Weekend' | 'Holiday';
 
-/** NSE cash-market session. Does not know exchange holidays. */
+/** NSE cash-market session, including published exchange holidays. */
 export function nseState(now: number): MarketState {
   const d = ist(now);
   const day = d.getUTCDay();
   if (day === 0 || day === 6) return 'Weekend';
+  if (NSE_HOLIDAYS[istDate(now)]) return 'Holiday';
   const mins = d.getUTCHours() * 60 + d.getUTCMinutes();
   if (mins >= 540 && mins < 555) return 'Pre-open';
   if (mins >= 555 && mins < 930) return 'Open';

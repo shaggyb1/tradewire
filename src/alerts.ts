@@ -8,6 +8,7 @@ import { merge } from './merge';
 import { SOURCE_BY_ID, SOURCES } from './sources';
 import { loadItems, loadSettings, saveItems } from './storage';
 import { LEVEL_LABEL } from './theme';
+import { matchWatch } from './watchlist';
 
 const TASK = 'tradewire-news-check';
 const CHANNEL = 'market-alerts';
@@ -55,26 +56,31 @@ export async function checkAndNotify(): Promise<number> {
 
   const notified = await loadNotified();
   const addedSet = new Set(added);
-  const hits: NewsItem[] = items.filter(
-    (i) =>
-      addedSet.has(i.id) &&
-      !notified.has(i.id) &&
-      i.impact.level >= settings.alertLevel &&
-      i.timeKind !== 'date' &&
-      now - i.time < FRESH_MS,
-  );
+  const watchOf = (i: NewsItem) => matchWatch(`${i.title} ${i.summary}`, settings.watchlist);
+  const hits: NewsItem[] = items
+    .filter(
+      (i) =>
+        addedSet.has(i.id) &&
+        !notified.has(i.id) &&
+        i.timeKind !== 'date' &&
+        now - i.time < FRESH_MS &&
+        (watchOf(i) !== null || (!settings.watchOnlyAlerts && i.impact.level >= settings.alertLevel)),
+    )
+    // Watchlist news first
+    .sort((a, b) => Number(watchOf(b) !== null) - Number(watchOf(a) !== null));
   if (!hits.length) return 0;
 
   for (const item of hits.slice(0, MAX_SINGLE_ALERTS)) {
     const src = SOURCE_BY_ID[item.sourceId];
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: `${src.short} · ${LEVEL_LABEL[item.impact.level]} impact${item.impact.tags.length ? ' · ' + item.impact.tags.slice(0, 2).join(', ') : ''}`,
-        body: item.title,
-        data: { url: item.link },
-      },
-      trigger: null,
-    });
+    const watch = watchOf(item);
+    // With the app lock on, keep headlines off the lock screen
+    const content = settings.lockEnabled
+      ? { title: 'TradeWire', body: watch ? 'New update on your watchlist' : 'New market update' }
+      : {
+          title: `${watch ? `★ ${watch} · ` : ''}${src.short} · ${LEVEL_LABEL[item.impact.level] || 'New'}${item.impact.level ? ' impact' : ''}${item.impact.tags.length ? ' · ' + item.impact.tags.slice(0, 2).join(', ') : ''}`,
+          body: item.title,
+        };
+    await Notifications.scheduleNotificationAsync({ content: { ...content, data: { url: item.link } }, trigger: null });
   }
   if (hits.length > MAX_SINGLE_ALERTS) {
     await Notifications.scheduleNotificationAsync({
