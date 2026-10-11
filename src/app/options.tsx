@@ -1,0 +1,295 @@
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Bar, IntradayChart } from '../components/Charts';
+import { intraday } from '../indicators';
+import { getAllIndices, getChain, getExpiries, getIndexTicks, OPTION_SYMBOLS, type Chain, type IndexQuote, type OptionSymbol, type Tick } from '../nse';
+import { chainStats, nearAtm, pcrReading } from '../optionStats';
+import { useStore } from '../store';
+import { C } from '../theme';
+import { istClock, nseState } from '../time';
+
+const REFRESH_MS = 60 * 1000;
+const fmt = (n: number, d = 2) => n.toLocaleString('en-IN', { maximumFractionDigits: d });
+/** OI in lakh contracts-units, e.g. 1,46,529 → 1.47L */
+const lakh = (n: number) => (Math.abs(n) >= 100000 ? `${(n / 100000).toFixed(2)}L` : Math.abs(n) >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
+const signed = (n: number) => `${n >= 0 ? '+' : '−'}${lakh(Math.abs(n))}`;
+
+export default function OptionsScreen() {
+  const { now } = useStore();
+  const { width } = useWindowDimensions();
+  const [symbol, setSymbol] = useState<OptionSymbol>('NIFTY');
+  const [expiries, setExpiries] = useState<string[]>([]);
+  const [expiry, setExpiry] = useState<string | null>(null);
+  const [chain, setChain] = useState<Chain | null>(null);
+  const [ticks, setTicks] = useState<{ prevClose: number; ticks: Tick[] } | null>(null);
+  const [vix, setVix] = useState<IndexQuote | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [fetchedAt, setFetchedAt] = useState<number | null>(null);
+  const busy = useRef(false);
+
+  const meta = OPTION_SYMBOLS.find((s) => s.symbol === symbol)!;
+
+  const selectSymbol = (s: OptionSymbol) => {
+    if (s === symbol) return;
+    setExpiries([]);
+    setExpiry(null);
+    setChain(null);
+    setTicks(null);
+    setSymbol(s);
+  };
+
+  // New symbol → load its expiries and pick the nearest
+  useEffect(() => {
+    let cancelled = false;
+    getExpiries(symbol)
+      .then((list) => {
+        if (cancelled) return;
+        setExpiries(list.slice(0, 4));
+        setExpiry(list[0] ?? null);
+      })
+      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : String(e)));
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol]);
+
+  const load = useCallback(async () => {
+    if (!expiry || busy.current) return;
+    busy.current = true;
+    setLoading(true);
+    const [c, t, q] = await Promise.allSettled([getChain(symbol, expiry), getIndexTicks(meta.index), getAllIndices()]);
+    if (c.status === 'fulfilled') setChain(c.value);
+    if (t.status === 'fulfilled') setTicks(t.value);
+    if (q.status === 'fulfilled') setVix(q.value.find((x) => x.index === 'INDIA VIX') ?? null);
+    const failed = [c, t].find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;
+    setError(failed ? (failed.reason instanceof Error ? failed.reason.message : String(failed.reason)) : null);
+    setFetchedAt(Date.now());
+    setLoading(false);
+    busy.current = false;
+  }, [symbol, expiry, meta.index]);
+
+  // Load when the tab is open; refresh every minute during market hours
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      const timer = setInterval(() => {
+        const st = nseState(Date.now());
+        if (st === 'Open' || st === 'Pre-open') load();
+      }, REFRESH_MS);
+      return () => clearInterval(timer);
+    }, [load]),
+  );
+
+  const stats = useMemo(() => (chain ? chainStats(chain) : null), [chain]);
+  const rows = useMemo(() => (chain && stats ? nearAtm(chain, stats.atm, 8) : []), [chain, stats]);
+  const tech = useMemo(() => (ticks ? intraday(ticks.ticks, ticks.prevClose) : null), [ticks]);
+  const maxOI = Math.max(1, ...rows.flatMap((r) => [r.CE?.openInterest ?? 0, r.PE?.openInterest ?? 0]));
+  const market = nseState(now);
+
+  return (
+    <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
+      <View style={styles.header}>
+        <Text style={styles.h1}>Options & intraday</Text>
+        <Text style={styles.small}>
+          {loading ? 'Updating…' : fetchedAt ? `NSE ${market} · fetched ${istClock(fetchedAt)} IST` : 'Loading…'}
+        </Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.accent} colors={[C.accent]} />}>
+        <View style={styles.row}>
+          {OPTION_SYMBOLS.map((s) => (
+            <Pressable key={s.symbol} onPress={() => selectSymbol(s.symbol)} style={[styles.chip, symbol === s.symbol && styles.chipOn]}>
+              <Text style={styles.chipText}>{s.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+        {expiries.length > 0 && (
+          <View style={[styles.row, { marginTop: 8 }]}>
+            {expiries.map((e) => (
+              <Pressable key={e} onPress={() => setExpiry(e)} style={[styles.chip, styles.chipSmall, expiry === e && styles.chipOn]}>
+                <Text style={styles.chipTextSmall}>{e.slice(0, 6)}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {error && (
+          <View style={[styles.card, { borderColor: C.high, borderWidth: 1 }]}>
+            <Text style={{ color: C.high, fontWeight: '700' }}>Couldn’t load NSE data</Text>
+            <Text style={styles.small}>{error}. Pull down to retry.</Text>
+          </View>
+        )}
+
+        {/* Intraday */}
+        {tech && ticks && (
+          <>
+            <Text style={styles.h2}>{meta.label} · intraday</Text>
+            <View style={styles.card}>
+              <View style={styles.priceRow}>
+                <Text style={styles.price}>{fmt(tech.last)}</Text>
+                <Text style={[styles.change, { color: tech.change >= 0 ? C.bull : C.bear }]}>
+                  {tech.change >= 0 ? '▲' : '▼'} {fmt(Math.abs(tech.change))} ({Math.abs(tech.pct).toFixed(2)}%)
+                </Text>
+              </View>
+              {vix && (
+                <Text style={styles.small}>
+                  India VIX {vix.last.toFixed(2)} ({vix.percentChange >= 0 ? '▲' : '▼'}
+                  {Math.abs(vix.percentChange).toFixed(2)}%)
+                </Text>
+              )}
+              <View style={{ marginTop: 10 }}>
+                <IntradayChart ticks={ticks.ticks} prevClose={ticks.prevClose} width={width - 48} />
+              </View>
+            </View>
+
+            <Text style={styles.h2}>Indicators · 5-min candles</Text>
+            <View style={styles.card}>
+              {tech.readings.map((r) => (
+                <View key={r.label} style={styles.readRow}>
+                  <Text style={[styles.readDir, { color: r.dir > 0 ? C.bull : r.dir < 0 ? C.bear : C.muted }]}>
+                    {r.dir > 0 ? '▲' : r.dir < 0 ? '▼' : '◆'}
+                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.readHead}>
+                      <Text style={styles.readLabel}>{r.label}</Text>
+                      <Text style={styles.readValue}>{r.value}</Text>
+                    </View>
+                    <Text style={styles.small}>{r.note}</Text>
+                  </View>
+                </View>
+              ))}
+              <Text style={[styles.small, { marginTop: 6 }]}>
+                Up {tech.readings.filter((r) => r.dir > 0).length} · Down {tech.readings.filter((r) => r.dir < 0).length} ·
+                Neutral {tech.readings.filter((r) => r.dir === 0).length}
+              </Text>
+            </View>
+          </>
+        )}
+
+        {/* Option chain analysis */}
+        {stats && chain && (
+          <>
+            <Text style={styles.h2}>
+              Option chain · {expiry} · as of {chain.timestamp.slice(12, 17)}
+            </Text>
+            <View style={styles.statsGrid}>
+              <Stat label="PCR (OI)" value={stats.pcr.toFixed(2)} note={pcrReading(stats.pcr)} />
+              <Stat label="Max pain" value={fmt(stats.maxPain, 0)} note={`Spot ${fmt(stats.spot)} · ${stats.spot >= stats.maxPain ? 'above' : 'below'} max pain`} />
+              <Stat label="Call wall" value={fmt(stats.callWall, 0)} note="Highest call OI — often watched as resistance" />
+              <Stat label="Put wall" value={fmt(stats.putWall, 0)} note="Highest put OI — often watched as support" />
+              <Stat label="ATM IV" value={`${stats.atmIv.toFixed(1)}%`} note={`ATM strike ${fmt(stats.atm, 0)}`} />
+              <Stat
+                label="Implied move"
+                value={`±${fmt(stats.straddle, 0)}`}
+                note={`ATM straddle ≈ ${fmt(stats.spot - stats.straddle, 0)} – ${fmt(stats.spot + stats.straddle, 0)} by expiry`}
+              />
+            </View>
+            <View style={styles.card}>
+              <Text style={styles.small}>
+                Biggest call OI added: {stats.callBuild ? `${fmt(stats.callBuild.strike, 0)} (${signed(stats.callBuild.change)})` : '—'}
+                {'\n'}Biggest put OI added: {stats.putBuild ? `${fmt(stats.putBuild.strike, 0)} (${signed(stats.putBuild.change)})` : '—'}
+                {'\n'}Total OI: calls {lakh(stats.totalCallOI)} · puts {lakh(stats.totalPutOI)}
+              </Text>
+            </View>
+
+            <View style={[styles.card, { marginTop: 8, paddingHorizontal: 6 }]}>
+              <View style={styles.tHead}>
+                <Text style={[styles.th, styles.side]}>CALLS · OI / ΔOI / LTP</Text>
+                <Text style={[styles.th, styles.strikeCol]}>Strike</Text>
+                <Text style={[styles.th, styles.side, { textAlign: 'right' }]}>LTP / ΔOI / OI · PUTS</Text>
+              </View>
+              {rows.map((r) => {
+                const atm = r.strikePrice === stats.atm;
+                const ceItm = r.strikePrice < stats.spot;
+                return (
+                  <View key={r.strikePrice} style={[styles.tRow, atm && styles.atmRow]}>
+                    <View style={[styles.side, ceItm && styles.itm]}>
+                      <Bar value={r.CE?.openInterest ?? 0} max={maxOI} color={C.downMark} align="right" />
+                      <Text style={styles.td}>
+                        {lakh(r.CE?.openInterest ?? 0)} · {signed(r.CE?.changeinOpenInterest ?? 0)} · {fmt(r.CE?.lastPrice ?? 0)}
+                      </Text>
+                    </View>
+                    <Text style={[styles.strike, styles.strikeCol, atm && { color: C.accent }]}>{fmt(r.strikePrice, 0)}</Text>
+                    <View style={[styles.side, !ceItm && !atm && styles.itm]}>
+                      <Bar value={r.PE?.openInterest ?? 0} max={maxOI} color={C.upMark} />
+                      <Text style={[styles.td, { textAlign: 'right' }]}>
+                        {fmt(r.PE?.lastPrice ?? 0)} · {signed(r.PE?.changeinOpenInterest ?? 0)} · {lakh(r.PE?.openInterest ?? 0)}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+              <View style={styles.legend}>
+                <View style={[styles.swatch, { backgroundColor: C.downMark }]} />
+                <Text style={styles.small}>Call OI</Text>
+                <View style={[styles.swatch, { backgroundColor: C.upMark, marginLeft: 12 }]} />
+                <Text style={styles.small}>Put OI</Text>
+                <Text style={[styles.small, { marginLeft: 12 }]}>Shaded = in the money · blue strike = ATM</Text>
+              </View>
+            </View>
+          </>
+        )}
+
+        <Text style={styles.footer}>
+          Data from the nseindia.com website (not an official API): may be delayed, and may stop working if NSE changes its
+          site. Indicators describe what price and open interest are doing; they are not buy or sell signals or investment
+          advice.
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function Stat({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statNote}>{note}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 },
+  h1: { color: C.text, fontSize: 22, fontWeight: '700' },
+  h2: { color: C.muted, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', marginTop: 16, marginBottom: 6, marginLeft: 4 },
+  content: { paddingHorizontal: 12, paddingBottom: 32 },
+  row: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  chip: { backgroundColor: C.chip, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16 },
+  chipSmall: { paddingHorizontal: 10, paddingVertical: 5 },
+  chipOn: { backgroundColor: C.chipActive },
+  chipText: { color: C.text, fontWeight: '600', fontSize: 13 },
+  chipTextSmall: { color: C.text, fontSize: 12 },
+  card: { backgroundColor: C.card, borderRadius: 10, padding: 12, marginTop: 8 },
+  small: { color: C.muted, fontSize: 12, lineHeight: 17 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
+  price: { color: C.text, fontSize: 24, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  change: { fontSize: 14, fontWeight: '700' },
+  readRow: { flexDirection: 'row', gap: 10, paddingVertical: 7, borderBottomColor: C.cardBorder, borderBottomWidth: StyleSheet.hairlineWidth },
+  readDir: { fontSize: 14, fontWeight: '800', width: 16, marginTop: 1 },
+  readHead: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  readLabel: { color: C.text, fontSize: 13, fontWeight: '700' },
+  readValue: { color: C.text, fontSize: 12, fontVariant: ['tabular-nums'], flexShrink: 1, textAlign: 'right' },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  stat: { backgroundColor: C.card, borderRadius: 10, padding: 10, width: '48.5%' },
+  statLabel: { color: C.muted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
+  statValue: { color: C.text, fontSize: 18, fontWeight: '800', marginTop: 2, fontVariant: ['tabular-nums'] },
+  statNote: { color: C.muted, fontSize: 11, marginTop: 2, lineHeight: 15 },
+  tHead: { flexDirection: 'row', paddingBottom: 6, borderBottomColor: C.cardBorder, borderBottomWidth: StyleSheet.hairlineWidth },
+  th: { color: C.muted, fontSize: 9, fontWeight: '800' },
+  tRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4 },
+  atmRow: { backgroundColor: C.chip, borderRadius: 6 },
+  side: { flex: 1, gap: 3, paddingHorizontal: 4 },
+  itm: { backgroundColor: '#18212B', borderRadius: 4 },
+  strikeCol: { width: 64, textAlign: 'center' },
+  strike: { color: C.text, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  td: { color: C.text, fontSize: 10, fontVariant: ['tabular-nums'] },
+  legend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' },
+  swatch: { width: 10, height: 10, borderRadius: 2 },
+  footer: { color: C.faint, fontSize: 11, lineHeight: 16, marginTop: 16, textAlign: 'center' },
+});

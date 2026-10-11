@@ -10,6 +10,7 @@ All tags and indicators are keyword-based triage from headline wording. They are
 
 | Version | What's new |
 |---|---|
+| 1.3.0 | Bottom tabs (News · Insights · Options · Calendar · Settings). **Insights:** event-risk meter, 7-day mood trend, sector heatmap with NSE sector moves, watchlist news trend. **Options:** Nifty / Bank Nifty / Fin Nifty / Midcap Nifty option chain (PCR, max pain, call/put walls, OI build-up, ATM IV, implied move) and intraday indicators (EMA 9/21, RSI 14, Supertrend, opening range, day range) with a touch chart. Colour-blind-safe blue/red up/down colours |
 | 1.2.0 | ★ Watchlist, 📅 market calendar (RBI, Fed, CPI/IIP/GDP, F&O expiries, holidays, watchlist results), app lock, hidden screen, NSE holiday-aware market status |
 | 1.1.0 | Bullish / Bearish indicator, 24h news-mood gauge |
 | 1.0.0 | First release: official feeds, impact tags, background alerts |
@@ -35,4 +36,4 @@ npx expo start
 
 Build a new APK with `npx eas-cli build -p android --profile preview`.
 
-Feeds are listed in `src/sources.ts`, impact rules in `src/impact.ts`, bullish/bearish rules in `src/tone.ts`, background alerts in `src/alerts.ts`.
+Screens are in `src/app/` (Expo Router tabs) and shared state in `src/store.tsx`. NSE market data (option chain, intraday prices, sector indices) is read in `src/nse.ts`; option-chain maths in `src/optionStats.ts`; intraday indicators in `src/indicators.ts`; insights in `src/insights.ts`. Feeds are listed in `src/sources.ts`, impact rules in `src/impact.ts`, bullish/bearish rules in `src/tone.ts`, background alerts in `src/alerts.ts`.

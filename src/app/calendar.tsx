@@ -1,18 +1,9 @@
 import { useMemo } from 'react';
-import { Modal, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { dayLabel, HOLIDAYS_KNOWN_UNTIL, upcomingEvents, type CalEvent, type EventKind } from '../calendar';
-import type { NewsItem } from '../feed';
+import { openLink, useStore } from '../store';
 import { C } from '../theme';
-
-interface Props {
-  visible: boolean;
-  now: number;
-  items: NewsItem[];
-  watchlist: string[];
-  onOpenLink: (url: string) => void;
-  onClose: () => void;
-}
 
 const KIND_STYLE: Record<EventKind, { icon: string; color: string }> = {
   RBI: { icon: '🏦', color: C.high },
@@ -24,9 +15,11 @@ const KIND_STYLE: Record<EventKind, { icon: string; color: string }> = {
   Holiday: { icon: '🚫', color: C.bear },
 };
 
-export default function CalendarSheet({ visible, now, items, watchlist, onOpenLink, onClose }: Props) {
+export default function CalendarScreen() {
+  const { now, items, settings } = useStore();
+  const watchlist = settings.watchlist;
+  const onOpenLink = openLink;
   const sections = useMemo(() => {
-    if (!visible) return [];
     const byDate = new Map<string, CalEvent[]>();
     for (const e of upcomingEvents(now, items, watchlist)) {
       const list = byDate.get(e.date) ?? [];
@@ -34,16 +27,12 @@ export default function CalendarSheet({ visible, now, items, watchlist, onOpenLi
       byDate.set(e.date, list);
     }
     return [...byDate.entries()].map(([date, data]) => ({ title: dayLabel(date, now), data }));
-  }, [visible, now, items, watchlist]);
+  }, [now, items, watchlist]);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.root}>
+    <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <Text style={styles.h1}>Market calendar</Text>
-          <Pressable onPress={onClose} hitSlop={12}>
-            <Text style={styles.done}>Done</Text>
-          </Pressable>
         </View>
         <SectionList
           sections={sections}
@@ -78,8 +67,7 @@ export default function CalendarSheet({ visible, now, items, watchlist, onOpenLi
             </Text>
           }
         />
-      </SafeAreaView>
-    </Modal>
+    </SafeAreaView>
   );
 }
 
@@ -87,7 +75,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   h1: { color: C.text, fontSize: 22, fontWeight: '700' },
-  done: { color: C.accent, fontSize: 16, fontWeight: '600' },
   content: { paddingHorizontal: 12, paddingBottom: 48 },
   day: { color: C.muted, backgroundColor: C.bg, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', paddingTop: 16, paddingBottom: 6, paddingHorizontal: 4 },
   event: {

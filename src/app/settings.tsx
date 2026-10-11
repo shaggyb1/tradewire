@@ -1,19 +1,11 @@
 import { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SOURCES, type Source } from '../sources';
 import type { Settings } from '../storage';
+import { useStore } from '../store';
 import { C } from '../theme';
 import { normalizeTerm } from '../watchlist';
-
-interface Props {
-  visible: boolean;
-  settings: Settings;
-  errors: Record<string, string>;
-  onChange: (s: Settings) => void;
-  onClearData: () => void;
-  onClose: () => void;
-}
 
 const INTERVALS = [30, 60, 120, 300];
 
@@ -29,7 +21,8 @@ const GROUPS: { title: string; filter: (s: Source) => boolean }[] = [
   { title: 'News media (not official, off by default)', filter: (s) => !s.official },
 ];
 
-export default function SettingsSheet({ visible, settings, errors, onChange, onClearData, onClose }: Props) {
+export default function SettingsScreen() {
+  const { settings, errors, updateSettings: onChange, clearData: onClearData } = useStore();
   const toggle = (id: string, on: boolean) =>
     onChange({ ...settings, enabled: on ? [...settings.enabled, id] : settings.enabled.filter((x) => x !== id) });
 
@@ -48,13 +41,9 @@ export default function SettingsSheet({ visible, settings, errors, onChange, onC
     ]);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.root}>
+    <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <Text style={styles.h1}>Settings</Text>
-          <Pressable onPress={onClose} hitSlop={12}>
-            <Text style={styles.done}>Done</Text>
-          </Pressable>
         </View>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={styles.h2}>★ Watchlist</Text>
@@ -174,7 +163,9 @@ export default function SettingsSheet({ visible, settings, errors, onChange, onC
             • No middle server: your phone fetches each feed directly from the official website over HTTPS.{'\n'}
             • Requests use a generic phone-browser identity and send no cookies.{'\n'}
             • Cached news and settings stay only on this phone.{'\n'}
-            • Tracking parameters are stripped from links.{'\n\n'}
+            • Tracking parameters are stripped from links.{'\n'}
+            • The Options and Insights tabs read market data from the nseindia.com website, only while you have
+            them open. NSE sets its own cookies for this; nothing else is shared.{'\n\n'}
             Limits: the websites you fetch from (and your mobile network) can still see your IP address, like
             any browsing. To hide that too, run a trusted VPN or Orbot (Tor) on the phone.
           </Text>
@@ -191,8 +182,7 @@ export default function SettingsSheet({ visible, settings, errors, onChange, onC
             research, or consult a SEBI-registered adviser, before trading.
           </Text>
         </ScrollView>
-      </SafeAreaView>
-    </Modal>
+    </SafeAreaView>
   );
 }
 
@@ -200,7 +190,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   h1: { color: C.text, fontSize: 22, fontWeight: '700' },
-  done: { color: C.accent, fontSize: 16, fontWeight: '600' },
   content: { paddingHorizontal: 16, paddingBottom: 48 },
   h2: { color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginTop: 24, marginBottom: 8 },
   row: { flexDirection: 'row', gap: 8 },
