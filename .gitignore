@@ -40,7 +40,7 @@ yarn-error.*
 /ios
 /android
 
-# local Claude Code settings
+# local editor settings
 .claude/
 
 
