@@ -67,17 +67,28 @@ export const OPTION_SYMBOLS = [
   { symbol: 'BANKNIFTY', index: 'NIFTY BANK', label: 'Bank Nifty' },
   { symbol: 'FINNIFTY', index: 'NIFTY FIN SERVICE', label: 'Fin Nifty' },
   { symbol: 'MIDCPNIFTY', index: 'NIFTY MID SELECT', label: 'Midcap Nifty' },
+  { symbol: 'NIFTYNXT50', index: 'NIFTY NEXT 50', label: 'Next 50' },
 ] as const;
-export type OptionSymbol = (typeof OPTION_SYMBOLS)[number]['symbol'];
 
-export async function getExpiries(symbol: OptionSymbol): Promise<string[]> {
-  const r = await api<{ expiryDates?: string[] }>(`/api/option-chain-contract-info?symbol=${symbol}`);
+export interface FnoStock {
+  symbol: string;
+  name: string;
+}
+
+/** Every stock with options on NSE. */
+export async function getFnoStocks(): Promise<FnoStock[]> {
+  const r = await api<{ data?: { UnderlyingList?: { symbol: string; underlying: string }[] } }>('/api/underlying-information');
+  return (r.data?.UnderlyingList ?? []).map((u) => ({ symbol: u.symbol, name: u.underlying }));
+}
+
+export async function getExpiries(symbol: string): Promise<string[]> {
+  const r = await api<{ expiryDates?: string[] }>(`/api/option-chain-contract-info?symbol=${encodeURIComponent(symbol)}`);
   return r.expiryDates ?? [];
 }
 
-export async function getChain(symbol: OptionSymbol, expiry: string): Promise<Chain> {
+export async function getChain(symbol: string, expiry: string, type: 'Indices' | 'Equity' = 'Indices'): Promise<Chain> {
   const r = await api<{ records?: { timestamp: string; underlyingValue: number; data: ChainRow[] } }>(
-    `/api/option-chain-v3?type=Indices&symbol=${symbol}&expiry=${encodeURIComponent(expiry)}`,
+    `/api/option-chain-v3?type=${type}&symbol=${encodeURIComponent(symbol)}&expiry=${encodeURIComponent(expiry)}`,
   );
   if (!r.records?.data) throw new Error('No option chain data');
   return { timestamp: r.records.timestamp, spot: r.records.underlyingValue, rows: r.records.data };
@@ -97,4 +108,22 @@ export async function getIndexTicks(index: string): Promise<{ prevClose: number;
   // NSE writes IST wall-clock time as if it were UTC; shift to real epoch
   const ticks = raw.map(([t, price, flag]) => ({ t: t - 330 * 60000, price, normal: flag !== 'PO' }));
   return { prevClose: r.data?.closePrice ?? 0, ticks };
+}
+
+/** Turns NSE's stock chart rows into ticks. It gives each price's change, which reveals the previous close. */
+export function parseStockTicks(raw: [number, number, string, string | number, string | number][]): { prevClose: number; ticks: Tick[] } {
+  const first = raw[0];
+  const prevClose = first ? first[1] - Number(first[3]) : 0;
+  return {
+    prevClose: Number.isFinite(prevClose) ? prevClose : 0,
+    ticks: raw.map(([t, price, flag]) => ({ t: t - 330 * 60000, price, normal: flag !== 'PO' })),
+  };
+}
+
+/** Today's minute-by-minute prices for a stock. */
+export async function getStockTicks(symbol: string): Promise<{ prevClose: number; ticks: Tick[] }> {
+  const r = await api<{ grapthData?: [number, number, string, string, string][] }>(
+    `/api/NextApi/apiClient/GetQuoteApi?functionName=getSymbolChartData&symbol=${encodeURIComponent(symbol + 'EQN')}&days=1D`,
+  );
+  return parseStockTicks(r.grapthData ?? []);
 }

@@ -4,9 +4,11 @@ const SESSION_MS = 4 * 60 * 1000;
 
 /** Web only. Just the NSE data addresses the app uses; anything else is refused. */
 const ALLOWED = [
-  /^\/api\/option-chain-contract-info\?symbol=[A-Z]+$/,
-  /^\/api\/option-chain-v3\?type=Indices&symbol=[A-Z]+&expiry=[0-9A-Za-z-]+$/,
+  /^\/api\/option-chain-contract-info\?symbol=(?:[A-Z0-9-]|%26)+$/,
+  /^\/api\/option-chain-v3\?type=(?:Indices|Equity)&symbol=(?:[A-Z0-9-]|%26)+&expiry=[0-9A-Za-z-]+$/,
   /^\/api\/allIndices$/,
+  /^\/api\/underlying-information$/,
+  /^\/api\/NextApi\/apiClient\/GetQuoteApi\?functionName=getSymbolChartData&symbol=(?:[A-Z0-9-]|%26)+&days=1D$/,
   /^\/api\/NextApi\/apiClient\/indexTrackerApi\?functionName=getIndexChart&&index=[A-Z0-9%]+&flag=1D$/,
 ];
 

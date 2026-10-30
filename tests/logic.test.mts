@@ -7,7 +7,7 @@ import { analyze } from '../src/impact';
 import { ema, intraday, rsi, supertrend, toCandles } from '../src/indicators';
 import { dayRisk, moodTrend, riskOutlook, sectorHeat, trendWord, watchTrends } from '../src/insights';
 import { merge } from '../src/merge';
-import type { Chain, Tick } from '../src/nse';
+import { parseStockTicks, type Chain, type Tick } from '../src/nse';
 import { chainStats, nearAtm, pcrReading } from '../src/optionStats';
 import { SOURCE_BY_ID, SOURCES } from '../src/sources';
 import { nseState } from '../src/time';
@@ -160,6 +160,15 @@ test('event risk', () => {
 
 const ticks = (prices: number[], startMin = 555): Tick[] =>
   prices.map((price, i) => ({ t: Date.UTC(2026, 9, 9, 0, startMin + i) - 330 * 60000, price, normal: true }));
+
+test('stock chart rows give ticks and the previous close', () => {
+  const r = parseStockTicks([[1793350859000, 1179, 'PO', '11.6', '0.99'], [1793350919000, 1180, 'NM', '12.6', '1.0']]);
+  assert.ok(Math.abs(r.prevClose - 1167.4) < 0.001);
+  assert.equal(r.ticks[0].normal, false);
+  assert.equal(r.ticks[1].normal, true);
+  assert.equal(r.ticks[0].t, 1793350859000 - 330 * 60000);
+  assert.deepEqual(parseStockTicks([]), { prevClose: 0, ticks: [] });
+});
 
 test('indicators: known values', () => {
   assert.deepEqual(ema([10, 10, 10], 3), [10, 10, 10]);

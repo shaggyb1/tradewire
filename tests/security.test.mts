@@ -71,6 +71,11 @@ test('NSE route refuses everything outside its allowlist without contacting NSE'
     '/api/option-chain-contract-info?symbol=NIFTY\r\nX-Evil: 1',
     '/api/option-chain-v3?type=Indices&symbol=NIFTY&expiry=../../x',
     '/api/NextApi/apiClient/indexTrackerApi?functionName=evil&&index=NIFTY&flag=1D',
+    '/api/NextApi/apiClient/GetQuoteApi?functionName=getSymbolData&symbol=RELIANCE&days=1D',
+    '/api/NextApi/apiClient/GetQuoteApi?functionName=getSymbolChartData&symbol=%2F..%2Fx&days=1D',
+    '/api/option-chain-v3?type=Evil&symbol=NIFTY&expiry=03-Nov-2026',
+    '/api/option-chain-contract-info?symbol=%2F..%2Fadmin',
+    '/api/underlying-information/../x',
     '/api/NextApi/apiClient/indexTrackerApi?functionName=getIndexChart&&index=../x&flag=1D',
   ];
   for (const p of bad) {
@@ -83,6 +88,12 @@ test('NSE route refuses everything outside its allowlist without contacting NSE'
 test('NSE route: every address the app uses is allowed and only reaches nseindia.com', async () => {
   const good = [
     '/api/allIndices',
+    '/api/underlying-information',
+    '/api/option-chain-contract-info?symbol=M%26M',
+    '/api/option-chain-contract-info?symbol=BAJAJ-AUTO',
+    '/api/option-chain-v3?type=Equity&symbol=M%26M&expiry=23-Nov-2026',
+    '/api/NextApi/apiClient/GetQuoteApi?functionName=getSymbolChartData&symbol=RELIANCEEQN&days=1D',
+    '/api/NextApi/apiClient/GetQuoteApi?functionName=getSymbolChartData&symbol=M%26MEQN&days=1D',
     '/api/option-chain-contract-info?symbol=NIFTY',
     '/api/option-chain-v3?type=Indices&symbol=BANKNIFTY&expiry=27-Oct-2026',
     `/api/NextApi/apiClient/indexTrackerApi?functionName=getIndexChart&&index=${encodeURIComponent('NIFTY 50')}&flag=1D`,

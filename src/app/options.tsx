@@ -1,10 +1,10 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bar, IntradayChart } from '../components/Charts';
 import { intraday } from '../indicators';
-import { getAllIndices, getChain, getExpiries, getIndexTicks, OPTION_SYMBOLS, type Chain, type IndexQuote, type OptionSymbol, type Tick } from '../nse';
+import { getAllIndices, getChain, getExpiries, getFnoStocks, getIndexTicks, getStockTicks, OPTION_SYMBOLS, type Chain, type FnoStock, type IndexQuote, type Tick } from '../nse';
 import { chainStats, nearAtm, pcrReading } from '../optionStats';
 import { useStore } from '../store';
 import { C, MAX_WIDTH } from '../theme';
@@ -19,7 +19,9 @@ const signed = (n: number) => `${n >= 0 ? '+' : '−'}${lakh(Math.abs(n))}`;
 export default function OptionsScreen() {
   const { now } = useStore();
   const { width } = useWindowDimensions();
-  const [symbol, setSymbol] = useState<OptionSymbol>('NIFTY');
+  const [symbol, setSymbol] = useState('NIFTY');
+  const [stocks, setStocks] = useState<FnoStock[]>([]);
+  const [stockQuery, setStockQuery] = useState('');
   const [expiries, setExpiries] = useState<string[]>([]);
   const [expiry, setExpiry] = useState<string | null>(null);
   const [chain, setChain] = useState<Chain | null>(null);
@@ -29,18 +31,39 @@ export default function OptionsScreen() {
   const [loading, setLoading] = useState(false);
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const busy = useRef(false);
+  /** Only the newest request may update the screen, so a slow old reply can never show the wrong symbol */
+  const latest = useRef(0);
 
-  const meta = OPTION_SYMBOLS.find((s) => s.symbol === symbol)!;
+  const indexMeta = OPTION_SYMBOLS.find((s) => s.symbol === symbol);
+  const indexName = indexMeta?.index;
+  const label = indexMeta?.label ?? symbol;
 
-  const selectSymbol = (s: OptionSymbol) => {
+  const selectSymbol = (s: string) => {
+    setStockQuery('');
     if (s === symbol) return;
+    latest.current++; // ignore replies still on their way for the previous symbol
+    setLoading(false);
     setExpiries([]);
     setExpiry(null);
     setChain(null);
     setTicks(null);
     setSymbol(s);
   };
+
+  // The stock list rarely changes: load it once
+  useEffect(() => {
+    getFnoStocks().then(setStocks).catch(() => {});
+  }, []);
+
+  const stockMatches = useMemo(() => {
+    const q = stockQuery.trim().toLowerCase();
+    if (!q) return [];
+    const rank = (s: FnoStock) => (s.symbol.toLowerCase().startsWith(q) ? 0 : s.name.toLowerCase().startsWith(q) ? 1 : 2);
+    return stocks
+      .filter((s) => s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q))
+      .sort((a, b) => rank(a) - rank(b))
+      .slice(0, 8);
+  }, [stocks, stockQuery]);
 
   // New symbol, or a retry after a failure → load its expiries and pick the nearest
   useEffect(() => {
@@ -59,10 +82,11 @@ export default function OptionsScreen() {
   }, [symbol, retryCount]);
 
   const load = useCallback(async () => {
-    if (!expiry || busy.current) return;
-    busy.current = true;
+    if (!expiry) return;
+    const id = ++latest.current;
     setLoading(true);
-    const [c, t, q] = await Promise.allSettled([getChain(symbol, expiry), getIndexTicks(meta.index), getAllIndices()]);
+    const [c, t, q] = await Promise.allSettled([getChain(symbol, expiry, indexName ? 'Indices' : 'Equity'), indexName ? getIndexTicks(indexName) : getStockTicks(symbol), getAllIndices()]);
+    if (id !== latest.current) return;
     if (c.status === 'fulfilled') setChain(c.value);
     if (t.status === 'fulfilled') setTicks(t.value);
     if (q.status === 'fulfilled') setVix(q.value.find((x) => x.index === 'INDIA VIX') ?? null);
@@ -70,8 +94,7 @@ export default function OptionsScreen() {
     setError(failed ? (failed.reason instanceof Error ? failed.reason.message : String(failed.reason)) : null);
     setFetchedAt(Date.now());
     setLoading(false);
-    busy.current = false;
-  }, [symbol, expiry, meta.index]);
+  }, [symbol, expiry, indexName]);
 
   // Manual refresh: if even the expiry list failed to load, start again from there
   const retry = () => (expiry ? load() : setRetryCount((n) => n + 1));
@@ -111,6 +134,32 @@ export default function OptionsScreen() {
             </Pressable>
           ))}
         </View>
+        <TextInput
+          value={stockQuery}
+          onChangeText={setStockQuery}
+          placeholder={`Search ${stocks.length || ''} F&O stocks: Reliance, TCS, SBI…`.replace('  ', ' ')}
+          placeholderTextColor={C.faint}
+          style={styles.stockSearch}
+          autoCorrect={false}
+          accessibilityLabel="Search F&O stocks"
+        />
+        {stockMatches.length > 0 && (
+          <View style={[styles.row, { marginTop: 8 }]}>
+            {stockMatches.map((s) => (
+              <Pressable key={s.symbol} onPress={() => selectSymbol(s.symbol)} style={styles.chip} accessibilityLabel={s.name}>
+                <Text style={styles.chipText}>{s.symbol}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+        {!!stockQuery.trim() && !stockMatches.length && stocks.length > 0 && <Text style={[styles.small, { marginTop: 8 }]}>No F&O stock matches that.</Text>}
+        {!indexMeta && (
+          <View style={[styles.row, { marginTop: 8 }]}>
+            <View style={[styles.chip, styles.chipOn]}>
+              <Text style={styles.chipText}>{symbol}</Text>
+            </View>
+          </View>
+        )}
         {expiries.length > 0 && (
           <View style={[styles.row, { marginTop: 8 }]}>
             {expiries.map((e) => (
@@ -134,7 +183,7 @@ export default function OptionsScreen() {
         {/* Intraday */}
         {tech && ticks && (
           <>
-            <Text style={styles.h2}>{meta.label} · intraday</Text>
+            <Text style={styles.h2}>{label} · intraday</Text>
             <View style={styles.card}>
               <View style={styles.priceRow}>
                 <Text style={styles.price}>{fmt(tech.last)}</Text>
@@ -248,7 +297,7 @@ export default function OptionsScreen() {
 
         <Text style={styles.footer}>
           Data from the nseindia.com website (not an official API): may be delayed, and may stop working if NSE changes its
-          site. Indicators describe what price and open interest are doing; they are not buy or sell signals or investment
+          site. Sensex (BSE) and crude oil (MCX) aren’t included because those exchanges block this kind of access. Indicators describe what price and open interest are doing; they are not buy or sell signals or investment
           advice.
         </Text>
       </ScrollView>
@@ -275,6 +324,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   chip: { backgroundColor: C.chip, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16 },
   chipSmall: { paddingHorizontal: 10, paddingVertical: 5 },
+  stockSearch: { backgroundColor: C.card, color: C.text, borderRadius: 10, borderWidth: 1, borderColor: C.cardBorder, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, marginTop: 8 },
   chipOn: { backgroundColor: C.chipActive },
   retry: { alignSelf: 'flex-start', marginTop: 8, backgroundColor: C.chipActive },
   chipText: { color: C.text, fontWeight: '600', fontSize: 13 },

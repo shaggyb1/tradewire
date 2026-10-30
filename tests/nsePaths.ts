@@ -46,5 +46,31 @@ export async function requiredNsePaths(base: string): Promise<NsePath[]> {
       check: (j: { data?: { grapthData?: unknown[] } }) => (j.data?.grapthData?.length ?? 0) > 0 || 'no ticks',
     });
   }
+  // Stocks, including symbols with special characters
+  const list = await fetch(`${base}/api/nse?path=${encodeURIComponent('/api/underlying-information')}`);
+  out.push({
+    name: 'F&O stock list',
+    path: '/api/underlying-information',
+    check: (j: { data?: { UnderlyingList?: unknown[] } }) => (j.data?.UnderlyingList?.length ?? 0) > 100 || 'short list',
+  });
+  void list;
+  for (const symbol of ['RELIANCE', 'M&M', 'BAJAJ-AUTO']) {
+    const enc = encodeURIComponent(symbol);
+    const res = await fetch(`${base}/api/nse?path=${encodeURIComponent(`/api/option-chain-contract-info?symbol=${enc}`)}`);
+    const expiry = res.ok ? ((await res.json()) as { expiryDates?: string[] }).expiryDates?.[0] : undefined;
+    out.push({
+      name: `chain ${symbol}`,
+      path: `/api/option-chain-v3?type=Equity&symbol=${enc}&expiry=${expiry}`,
+      check: (j: never) => {
+        const s = chainStats(getChainFromJson(j));
+        return (s !== null && s.spot > 0 && s.totalCallOI > 0) || 'bad chain';
+      },
+    });
+    out.push({
+      name: `ticks ${symbol}`,
+      path: `/api/NextApi/apiClient/GetQuoteApi?functionName=getSymbolChartData&symbol=${encodeURIComponent(symbol + 'EQN')}&days=1D`,
+      check: (j: { grapthData?: unknown[] }) => (j.grapthData?.length ?? 0) > 0 || 'no ticks',
+    });
+  }
   return out;
 }
