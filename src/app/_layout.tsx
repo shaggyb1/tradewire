@@ -11,7 +11,7 @@ import { C } from '../theme';
 const SCENE = {
   backgroundColor: C.bg,
   ...(Platform.OS === 'web'
-    ? { backgroundImage: 'radial-gradient(60rem 28rem at 15% -8%, rgba(229,172,130,0.13), transparent 70%), radial-gradient(50rem 26rem at 95% 0%, rgba(158,203,187,0.07), transparent 70%)' }
+    ? { backgroundImage: 'radial-gradient(60rem 28rem at 15% -8%, rgba(212,206,140,0.11), transparent 70%), radial-gradient(50rem 26rem at 95% 0%, rgba(143,211,168,0.06), transparent 70%)' }
     : null),
 };
 

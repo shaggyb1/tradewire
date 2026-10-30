@@ -98,6 +98,7 @@ const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 /** Bullish count above the baseline, bearish below, one column per day. Tap a day to read it. */
 export function MoodTrendChart({ days, width, height = 120 }: MoodProps) {
   const [sel, setSel] = useState<number | null>(null);
+  if (width <= 0) return null;
   const maxV = Math.max(1, ...days.map((d) => Math.max(d.up, d.down)));
   const half = height / 2;
   const col = width / days.length;
