@@ -49,7 +49,7 @@ function Highlight({ children }: { children: string }) {
   return (
     <Animated.Text
       style={{
-        backgroundColor: v.interpolate({ inputRange: [0, 1], outputRange: ['rgba(212,206,140,0)', 'rgba(212,206,140,1)'] }),
+        backgroundColor: v.interpolate({ inputRange: [0, 1], outputRange: ['rgba(58,112,137,0)', 'rgba(58,112,137,1)'] }),
         color: v.interpolate({ inputRange: [0, 1], outputRange: [C.text, C.accentInk] }),
       }}
     >

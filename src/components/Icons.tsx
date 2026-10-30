@@ -59,9 +59,9 @@ export function SettingsIcon({ color, size = 22 }: Props) {
 export function Logo({ size = 30 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 32 32">
-      <Rect width={32} height={32} rx={9} fill="#F3F1E2" />
-      <Path d="M6 21h6l4-10 4 10h6" stroke="#1A1C12" strokeWidth={2.6} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <Circle cx={16} cy={11} r={2.4} fill="#8F8A3E" />
+      <Rect width={32} height={32} rx={9} fill="#22303A" />
+      <Path d="M6 21h6l4-10 4 10h6" stroke="#F9FBFC" strokeWidth={2.6} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx={16} cy={11} r={2.4} fill="#8FC1D8" />
     </Svg>
   );
 }

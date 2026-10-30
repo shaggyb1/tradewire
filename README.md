@@ -10,7 +10,7 @@ All tags and indicators are keyword-based triage from headline wording. They are
 
 | Version | What's new |
 |---|---|
-| 1.5.0 | New look: calm olive and cream theme, live market tape, signal map, line icons, teal/coral up-down colours |
+| 1.5.0 | New look: calm, light Morning mist theme, live market tape, signal map, line icons, teal/coral up-down colours |
 | 1.4.0 | Website version from the same code. Fixes: intraday chart limited to 9:15Ã¢â‚¬â€œ15:30, undated older items no longer jump to the top, chart taps keep their reading |
 | 1.3.0 | Bottom tabs (News Ã‚Â· Insights Ã‚Â· Options Ã‚Â· Calendar Ã‚Â· Settings). **Insights:** event-risk meter, 7-day mood trend, sector heatmap with NSE sector moves, watchlist news trend. **Options:** Nifty / Bank Nifty / Fin Nifty / Midcap Nifty option chain (PCR, max pain, call/put walls, OI build-up, ATM IV, implied move) and intraday indicators (EMA 9/21, RSI 14, Supertrend, opening range, day range) with a touch chart. Colour-blind-safe blue/red up/down colours |
 | 1.2.0 | Ã¢Ëœâ€¦ Watchlist, Ã°Å¸â€œâ€¦ market calendar (RBI, Fed, CPI/IIP/GDP, F&O expiries, holidays, watchlist results), app lock, hidden screen, NSE holiday-aware market status |

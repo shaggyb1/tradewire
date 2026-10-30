@@ -5,14 +5,14 @@
     "version": "1.5.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tradewire.news"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0B0F14",
+        "backgroundColor": "#EEF3F5",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -42,7 +42,7 @@
       "expo-router",
       "expo-font"
     ],
-    "backgroundColor": "#0B0F14",
+    "backgroundColor": "#EEF3F5",
     "extra": {
       "eas": {
         "projectId": "b7598245-3cfe-439a-9165-cdfc82be3551"
