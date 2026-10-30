@@ -7,7 +7,7 @@ import { intraday } from '../indicators';
 import { getAllIndices, getChain, getExpiries, getIndexTicks, OPTION_SYMBOLS, type Chain, type IndexQuote, type OptionSymbol, type Tick } from '../nse';
 import { chainStats, nearAtm, pcrReading } from '../optionStats';
 import { useStore } from '../store';
-import { C } from '../theme';
+import { C, MAX_WIDTH } from '../theme';
 import { istClock, nseState } from '../time';
 
 const REFRESH_MS = (Platform.OS === 'web' ? 120 : 60) * 1000;
@@ -141,7 +141,7 @@ export default function OptionsScreen() {
                 </Text>
               )}
               <View style={{ marginTop: 10 }}>
-                <IntradayChart ticks={ticks.ticks} prevClose={ticks.prevClose} width={width - 48} />
+                <IntradayChart ticks={ticks.ticks} prevClose={ticks.prevClose} width={Math.min(width, MAX_WIDTH) - 50} />
               </View>
             </View>
 
@@ -227,7 +227,7 @@ export default function OptionsScreen() {
                 <Text style={styles.small}>Call OI</Text>
                 <View style={[styles.swatch, { backgroundColor: C.upMark, marginLeft: 12 }]} />
                 <Text style={styles.small}>Put OI</Text>
-                <Text style={[styles.small, { marginLeft: 12 }]}>Shaded = in the money · blue strike = ATM</Text>
+                <Text style={[styles.small, { marginLeft: 12 }]}>Shaded = in the money · highlighted strike = ATM</Text>
               </View>
             </View>
           </>
@@ -254,18 +254,18 @@ function Stat({ label, value, note }: { label: string; value: string; note: stri
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
-  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 },
-  h1: { color: C.text, fontSize: 22, fontWeight: '700' },
-  h2: { color: C.muted, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', marginTop: 16, marginBottom: 6, marginLeft: 4 },
-  content: { paddingHorizontal: 12, paddingBottom: 32 },
+  root: { flex: 1, backgroundColor: Platform.OS === 'web' ? 'transparent' : C.bg },
+  header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  h1: { color: C.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.8 },
+  h2: { color: C.accent, fontSize: 12, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', marginTop: 16, marginBottom: 6, marginLeft: 4 },
+  content: { paddingHorizontal: 12, paddingBottom: 32, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
   row: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   chip: { backgroundColor: C.chip, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16 },
   chipSmall: { paddingHorizontal: 10, paddingVertical: 5 },
   chipOn: { backgroundColor: C.chipActive },
   chipText: { color: C.text, fontWeight: '600', fontSize: 13 },
   chipTextSmall: { color: C.text, fontSize: 12 },
-  card: { backgroundColor: C.card, borderRadius: 10, padding: 12, marginTop: 8 },
+  card: { backgroundColor: C.card, borderRadius: 14, padding: 12, marginTop: 8, borderWidth: 1, borderColor: C.cardBorder },
   small: { color: C.muted, fontSize: 12, lineHeight: 17 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
   price: { color: C.text, fontSize: 24, fontWeight: '800', fontVariant: ['tabular-nums'] },
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   readLabel: { color: C.text, fontSize: 13, fontWeight: '700' },
   readValue: { color: C.text, fontSize: 12, fontVariant: ['tabular-nums'], flexShrink: 1, textAlign: 'right' },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  stat: { backgroundColor: C.card, borderRadius: 10, padding: 10, width: '48.5%' },
+  stat: { backgroundColor: C.card, borderRadius: 14, padding: 10, width: '48.5%', borderWidth: 1, borderColor: C.cardBorder },
   statLabel: { color: C.muted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
   statValue: { color: C.text, fontSize: 18, fontWeight: '800', marginTop: 2, fontVariant: ['tabular-nums'] },
   statNote: { color: C.muted, fontSize: 11, marginTop: 2, lineHeight: 15 },
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   tRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4 },
   atmRow: { backgroundColor: C.chip, borderRadius: 6 },
   side: { flex: 1, gap: 3, paddingHorizontal: 4 },
-  itm: { backgroundColor: '#18212B', borderRadius: 4 },
+  itm: { backgroundColor: C.chip, borderRadius: 4 },
   strikeCol: { width: 64, textAlign: 'center' },
   strike: { color: C.text, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] },
   td: { color: C.text, fontSize: 10, fontVariant: ['tabular-nums'] },

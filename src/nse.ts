@@ -3,7 +3,7 @@ import { nseFetch } from './transport';
 /*
  * Reads market data from the public nseindia.com website — the same requests its own pages make.
  * NSE has no official free API for this, so it is unofficial: data may be delayed, and NSE can change or
- * block these addresses at any time. Requests are made only while the Options or Insights screen is open.
+ * block these addresses at any time. Requests are made only while the News, Options or Insights screen is open.
  */
 
 async function api<T>(path: string): Promise<T> {

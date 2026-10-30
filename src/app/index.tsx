@@ -1,13 +1,15 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Logo } from '../components/Icons';
 import MoodBar from '../components/MoodBar';
 import NewsCard from '../components/NewsCard';
 import RiskStrip from '../components/RiskStrip';
+import TickerTape from '../components/TickerTape';
 import type { NewsItem } from '../feed';
 import { SOURCE_BY_ID, SOURCES } from '../sources';
 import { openLink, useStore } from '../store';
-import { C } from '../theme';
+import { C, MAX_WIDTH } from '../theme';
 import { istClock, nseState } from '../time';
 
 type Tab = 'All' | 'India' | 'Global' | 'High' | 'Watch';
@@ -28,6 +30,7 @@ export default function NewsScreen() {
   const [query, setQuery] = useState('');
   const [toneFilter, setToneFilter] = useState<1 | -1 | null>(null);
   const listRef = useRef<FlatList<NewsItem>>(null);
+  const wide = useWindowDimensions().width >= 700;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -74,77 +77,7 @@ export default function NewsScreen() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.logo}>TradeWire</Text>
-          <Text style={styles.updated}>
-            <Text style={{ color: loading ? C.med : C.open }}>● </Text>
-            {loading ? 'Updating…' : lastUpdated ? `Updated ${istClock(lastUpdated, true)} IST` : 'Connecting…'}
-            {failed > 0 && <Text style={{ color: C.high }}>{`  ·  ${failed} source${failed > 1 ? 's' : ''} failed`}</Text>}
-          </Text>
-        </View>
-        <Text
-          style={[
-            styles.market,
-            market === 'Open' && { color: C.open, borderColor: C.open },
-            market === 'Holiday' && { color: C.bear, borderColor: C.bear },
-          ]}
-        >
-          NSE {market}
-        </Text>
-      </View>
-
-      <TextInput
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Search: repo, crude, Reliance, SEBI…"
-        placeholderTextColor={C.faint}
-        style={styles.search}
-        autoCorrect={false}
-        autoCapitalize="none"
-        clearButtonMode="while-editing"
-      />
-
-      <View style={styles.tabs}>
-        {TABS.map((t) => (
-          <Pressable key={t.key} onPress={() => setTab(t.key)} style={[styles.tab, tab === t.key && styles.tabOn]}>
-            <Text style={[styles.tabText, tab === t.key && { color: C.text }]}>{t.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          <Pressable onPress={() => setSourceFilter(null)} style={[styles.chip, !sourceFilter && styles.chipOn]}>
-            <Text style={styles.chipText}>All sources</Text>
-          </Pressable>
-          {enabledSources.map((s) => (
-            <Pressable
-              key={s.id}
-              onPress={() => setSourceFilter(sourceFilter === s.id ? null : s.id)}
-              style={[styles.chip, sourceFilter === s.id && styles.chipOn]}
-            >
-              <Text style={[styles.chipText, errors[s.id] && { color: C.high }]}>{s.name}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
-
-      <RiskStrip />
-      <MoodBar up={mood.up} down={mood.down} filter={toneFilter} onFilter={setToneFilter} />
-
-      {newCount > 0 && (
-        <Pressable
-          style={styles.newBanner}
-          onPress={() => {
-            markRead();
-            listRef.current?.scrollToOffset({ offset: 0, animated: true });
-          }}
-        >
-          <Text style={styles.newBannerText}>↑ {newCount} new update{newCount > 1 ? 's' : ''} · tap to mark read</Text>
-        </Pressable>
-      )}
-
+      <TickerTape />
       <FlatList
         ref={listRef}
         data={visible}
@@ -159,7 +92,7 @@ export default function NewsScreen() {
             onShare={onShare}
           />
         )}
-        contentContainerStyle={{ paddingTop: 4, paddingBottom: 32 }}
+        contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
             refreshing={loading && items.length > 0}
@@ -171,6 +104,90 @@ export default function NewsScreen() {
         }
         initialNumToRender={12}
         windowSize={9}
+        ListHeaderComponent={
+          <View>
+                <View style={styles.header}>
+                  <View style={styles.brand}>
+                    <Logo />
+                    <Text style={styles.logo}>TradeWire</Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.market,
+                      market === 'Open' && { color: C.open, borderColor: C.open },
+                      market === 'Holiday' && { color: C.bear, borderColor: C.bear },
+                    ]}
+                  >
+                    NSE {market}
+                  </Text>
+                </View>
+          
+                <View style={styles.hero}>
+                  <Text style={styles.eyebrow}>Official sources · India & global</Text>
+                  <Text style={[styles.heroTitle, wide && styles.heroTitleWide]}>
+                    Market news, <Text style={styles.mark}> from the source. </Text>
+                  </Text>
+                  <Text style={styles.updated}>
+                    <Text style={{ color: loading ? C.med : C.open }}>● </Text>
+                    {loading ? 'Updating…' : lastUpdated ? `Updated ${istClock(lastUpdated, true)} IST` : 'Connecting…'}
+                    {' · '}
+                    {enabledSources.length - failed} of {enabledSources.length} sources live
+                    {failed > 0 && <Text style={{ color: C.high }}>{` · ${failed} failed`}</Text>}
+                  </Text>
+                </View>
+          
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search: repo, crude, Reliance, SEBI…"
+                  placeholderTextColor={C.faint}
+                  style={styles.search}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  clearButtonMode="while-editing"
+                />
+          
+                <View style={styles.tabs}>
+                  {TABS.map((t) => (
+                    <Pressable key={t.key} onPress={() => setTab(t.key)} style={[styles.tab, tab === t.key && styles.tabOn]}>
+                      <Text style={[styles.tabText, tab === t.key && { color: C.text }]}>{t.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+          
+                <View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+                    <Pressable onPress={() => setSourceFilter(null)} style={[styles.chip, !sourceFilter && styles.chipOn]}>
+                      <Text style={styles.chipText}>All sources</Text>
+                    </Pressable>
+                    {enabledSources.map((s) => (
+                      <Pressable
+                        key={s.id}
+                        onPress={() => setSourceFilter(sourceFilter === s.id ? null : s.id)}
+                        style={[styles.chip, sourceFilter === s.id && styles.chipOn]}
+                      >
+                        <Text style={[styles.chipText, errors[s.id] && { color: C.high }]}>{s.name}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+          
+                <RiskStrip />
+                <MoodBar up={mood.up} down={mood.down} filter={toneFilter} onFilter={setToneFilter} />
+          
+                {newCount > 0 && (
+                  <Pressable
+                    style={styles.newBanner}
+                    onPress={() => {
+                      markRead();
+                      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+                    }}
+                  >
+                    <Text style={styles.newBannerText}>↑ {newCount} new update{newCount > 1 ? 's' : ''} · tap to mark read</Text>
+                  </Pressable>
+                )}
+          </View>
+        }
         ListEmptyComponent={
           <Text style={styles.empty}>
             {loading || !ready
@@ -191,9 +208,16 @@ export default function NewsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 },
-  logo: { color: C.text, fontSize: 22, fontWeight: '800', letterSpacing: 0.3 },
+  root: { flex: 1, backgroundColor: Platform.OS === 'web' ? 'transparent' : C.bg },
+  listContent: { paddingTop: 4, paddingBottom: 32, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  logo: { color: C.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
+  hero: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 18, gap: 8 },
+  eyebrow: { color: C.accent, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
+  heroTitle: { color: C.text, fontSize: 36, lineHeight: 42, fontWeight: '700', letterSpacing: -1.2 },
+  heroTitleWide: { fontSize: 60, lineHeight: 68, letterSpacing: -2.4 },
+  mark: { backgroundColor: C.accent, color: C.accentInk },
   updated: { color: C.muted, fontSize: 12, marginTop: 2 },
   market: { color: C.muted, fontSize: 11, fontWeight: '700', borderColor: C.none, borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   search: { backgroundColor: C.card, color: C.text, marginHorizontal: 12, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 15 },

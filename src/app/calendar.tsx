@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { dayLabel, HOLIDAYS_KNOWN_UNTIL, upcomingEvents, type CalEvent, type EventKind } from '../calendar';
 import { openLink, useStore } from '../store';
-import { C } from '../theme';
+import { C, MAX_WIDTH } from '../theme';
 
 const KIND_STYLE: Record<EventKind, { icon: string; color: string }> = {
   RBI: { icon: '🏦', color: C.high },
@@ -72,17 +72,17 @@ export default function CalendarScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
-  h1: { color: C.text, fontSize: 22, fontWeight: '700' },
-  content: { paddingHorizontal: 12, paddingBottom: 48 },
-  day: { color: C.muted, backgroundColor: C.bg, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', paddingTop: 16, paddingBottom: 6, paddingHorizontal: 4 },
+  root: { flex: 1, backgroundColor: Platform.OS === 'web' ? 'transparent' : C.bg },
+  header: { padding: 16, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  h1: { color: C.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.8 },
+  content: { paddingHorizontal: 12, paddingBottom: 48, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  day: { color: C.accent, backgroundColor: C.bg, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', paddingTop: 16, paddingBottom: 6, paddingHorizontal: 4 },
   event: {
     flexDirection: 'row',
     gap: 10,
     alignItems: 'center',
     backgroundColor: C.card,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 10,
     marginBottom: 6,
     borderLeftWidth: 3,

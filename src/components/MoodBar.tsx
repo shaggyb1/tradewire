@@ -47,7 +47,7 @@ export default function MoodBar({ up, down, filter, onFilter }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { backgroundColor: C.card, marginHorizontal: 12, marginBottom: 8, borderRadius: 10, padding: 10, gap: 6 },
+  wrap: { backgroundColor: C.card, marginHorizontal: 12, marginBottom: 8, borderRadius: 14, padding: 12, gap: 6, borderWidth: 1, borderColor: C.cardBorder },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { color: C.muted, fontSize: 12, fontWeight: '700' },
   verdict: { fontSize: 12, fontWeight: '800' },

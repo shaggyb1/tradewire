@@ -1,13 +1,14 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bar, MoodTrendChart } from '../components/Charts';
+import SignalMap from '../components/SignalMap';
 import { dayLabel } from '../calendar';
 import { moodTrend, riskOutlook, sectorHeat, trendWord, watchTrends } from '../insights';
 import { getAllIndices, type IndexQuote } from '../nse';
 import { openLink, useStore } from '../store';
-import { C } from '../theme';
+import { C, MAX_WIDTH } from '../theme';
 
 const RISK_COLOR = { High: C.high, Medium: C.med, Low: C.muted, Closed: C.faint } as const;
 
@@ -43,12 +44,17 @@ export default function InsightsScreen() {
   const watch = useMemo(() => watchTrends(items, settings.watchlist, now), [items, settings.watchlist, now]);
   const maxSector = Math.max(1, ...sectors.map((s) => Math.max(s.up, s.down)));
   const vix = quotes.find((q) => q.index === 'INDIA VIX');
-  const chartW = width - 24 - 24;
+  const chartW = Math.min(width, MAX_WIDTH) - 24 - 24 - 2;
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
       <Text style={styles.h1}>Insights</Text>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={loadQuotes} tintColor={C.accent} colors={[C.accent]} />}>
+        <Text style={styles.h2}>Signal map · last 24h</Text>
+        <View style={styles.card}>
+          <SignalMap items={items} enabled={settings.enabled} now={now} width={chartW} />
+        </View>
+
         {/* 4. Event risk */}
         <Text style={styles.h2}>Event risk</Text>
         <View style={styles.card}>
@@ -145,11 +151,11 @@ export default function InsightsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
-  h1: { color: C.text, fontSize: 22, fontWeight: '700', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
-  content: { paddingHorizontal: 12, paddingBottom: 32 },
-  h2: { color: C.muted, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', marginTop: 16, marginBottom: 6, marginLeft: 4 },
-  card: { backgroundColor: C.card, borderRadius: 10, padding: 12 },
+  root: { flex: 1, backgroundColor: Platform.OS === 'web' ? 'transparent' : C.bg },
+  h1: { color: C.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  content: { paddingHorizontal: 12, paddingBottom: 32, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  h2: { color: C.accent, fontSize: 12, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', marginTop: 16, marginBottom: 6, marginLeft: 4 },
+  card: { backgroundColor: C.card, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: C.cardBorder },
   small: { color: C.muted, fontSize: 12, lineHeight: 17 },
   riskRow: { flexDirection: 'row', gap: 10, paddingVertical: 6 },
   riskDay: { color: C.text, fontSize: 13, fontWeight: '700', width: 82 },

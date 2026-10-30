@@ -44,6 +44,6 @@ const styles = StyleSheet.create({
   icon: { fontSize: 48 },
   title: { color: C.text, fontSize: 20, fontWeight: '700' },
   sub: { color: C.muted, fontSize: 14, textAlign: 'center' },
-  btn: { marginTop: 16, backgroundColor: C.chipActive, paddingHorizontal: 32, paddingVertical: 12, borderRadius: 10 },
-  btnText: { color: C.text, fontSize: 16, fontWeight: '700' },
+  btn: { marginTop: 16, backgroundColor: C.accent, paddingHorizontal: 32, paddingVertical: 12, borderRadius: 10 },
+  btnText: { color: C.accentInk, fontSize: 16, fontWeight: '700' },
 });

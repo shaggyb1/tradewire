@@ -23,6 +23,7 @@ interface LineProps {
 export function IntradayChart({ ticks, prevClose, width, height = 150 }: LineProps) {
   const pts = useMemo(() => ticks.filter(inSession), [ticks]);
   const [hover, setHover] = useState<number | null>(null);
+  if (width <= 0) return null;
   if (pts.length < 2) return <Text style={styles.empty}>No intraday data yet</Text>;
 
   const prices = pts.map((p) => p.price).concat(prevClose ? [prevClose] : []);

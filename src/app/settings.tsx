@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SOURCES, type Source } from '../sources';
 import type { Settings } from '../storage';
 import { useStore } from '../store';
-import { C } from '../theme';
+import { C, MAX_WIDTH } from '../theme';
 import { normalizeTerm } from '../watchlist';
 
 const IS_WEB = Platform.OS === 'web';
@@ -185,7 +185,7 @@ export default function SettingsScreen() {
             • Requests use a generic phone-browser identity and send no cookies.{'\n'}
             • Cached news and settings stay only on this phone.{'\n'}
             • Tracking parameters are stripped from links.{'\n'}
-            • The Options and Insights tabs read market data from the nseindia.com website, only while you have
+            • The market tape and the Options and Insights tabs read market data from the nseindia.com website, only while you have
             them open. NSE sets its own cookies for this; nothing else is shared.{'\n\n'}
             Limits: the websites you fetch from (and your mobile network) can still see your IP address, like
             any browsing. To hide that too, run a trusted VPN or Orbot (Tor) on the phone.
@@ -208,11 +208,11 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
-  h1: { color: C.text, fontSize: 22, fontWeight: '700' },
-  content: { paddingHorizontal: 16, paddingBottom: 48 },
-  h2: { color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginTop: 24, marginBottom: 8 },
+  root: { flex: 1, backgroundColor: Platform.OS === 'web' ? 'transparent' : C.bg },
+  header: { padding: 16, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  h1: { color: C.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.8 },
+  content: { paddingHorizontal: 16, paddingBottom: 48, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  h2: { color: C.accent, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginTop: 24, marginBottom: 8 },
   row: { flexDirection: 'row', gap: 8 },
   chip: { backgroundColor: C.chip, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16 },
   chipOn: { backgroundColor: C.chipActive },

@@ -1,6 +1,13 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 
+// Font is served from this site, so the browser doesn't contact a font service
+const GLOBAL_CSS = `
+@font-face { font-family: 'Inter Tight'; src: url('/fonts/InterTight.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+* { font-family: 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif !important; }
+body { background-color: #11120F; }
+`;
+
 export default function Root({ children }: PropsWithChildren) {
   return (
     <html lang="en">
@@ -12,7 +19,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="robots" content="noindex, nofollow" />
         <title>TradeWire</title>
         <ScrollViewStyleReset />
-        <style dangerouslySetInnerHTML={{ __html: 'body { background-color: #0B0F14; }' }} />
+        <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
       </head>
       <body>{children}</body>
     </html>
