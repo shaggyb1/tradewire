@@ -12,6 +12,8 @@ export interface Source {
   official: boolean;
   /** Time zone to assume when the feed's dates have none */
   tz: string;
+  /** Feed publishes no dates at all; otherwise undated items are treated as stale and dropped */
+  undated?: boolean;
   /** Max items kept from this feed per refresh */
   max?: number;
 }
@@ -22,7 +24,7 @@ export const SOURCES: Source[] = [
   { id: 'rbi-pr', name: 'RBI Press Releases', short: 'RBI', url: 'https://www.rbi.org.in/pressreleases_rss.xml', region: 'India', kind: 'Central Bank', official: true, tz: '+0530' },
   { id: 'rbi-notif', name: 'RBI Notifications', short: 'RBI', url: 'https://www.rbi.org.in/notifications_rss.xml', region: 'India', kind: 'Central Bank', official: true, tz: '+0530' },
   { id: 'sebi', name: 'SEBI', short: 'SEBI', url: 'https://www.sebi.gov.in/sebirss.xml', region: 'India', kind: 'Regulator', official: true, tz: '+0530' },
-  { id: 'pib', name: 'PIB (Govt of India)', short: 'PIB', url: 'https://www.pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3&reg=3', region: 'India', kind: 'Government', official: true, tz: '+0530' },
+  { id: 'pib', name: 'PIB (Govt of India)', short: 'PIB', url: 'https://www.pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3&reg=3', region: 'India', kind: 'Government', official: true, tz: '+0530', undated: true },
   { id: 'nse-ann', name: 'NSE Corporate Announcements', short: 'NSE', url: 'https://nsearchives.nseindia.com/content/RSS/Online_announcements.xml', region: 'India', kind: 'Exchange', official: true, tz: '+0530', max: 60 },
   { id: 'nse-circ', name: 'NSE Circulars', short: 'NSE', url: 'https://nsearchives.nseindia.com/content/RSS/Circulars.xml', region: 'India', kind: 'Exchange', official: true, tz: '+0530' },
   { id: 'bse', name: 'BSE Notices', short: 'BSE', url: 'https://www.bseindia.com/data/xml/notices.xml', region: 'India', kind: 'Exchange', official: true, tz: 'GMT' },

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SOURCES, type Source } from '../sources';
 import type { Settings } from '../storage';
@@ -7,7 +7,8 @@ import { useStore } from '../store';
 import { C } from '../theme';
 import { normalizeTerm } from '../watchlist';
 
-const INTERVALS = [30, 60, 120, 300];
+const IS_WEB = Platform.OS === 'web';
+const INTERVALS = IS_WEB ? [120, 300] : [30, 60, 120, 300];
 
 const ALERT_OPTIONS: { level: Settings['alertLevel']; label: string }[] = [
   { level: 0, label: 'Off' },
@@ -34,11 +35,16 @@ export default function SettingsScreen() {
     onChange({ ...settings, watchlist: [...settings.watchlist, term] });
   };
 
-  const confirmClear = () =>
+  const confirmClear = () => {
+    if (IS_WEB) {
+      if (window.confirm('Clear all data? Removes cached news and settings from this browser.')) onClearData();
+      return;
+    }
     Alert.alert('Clear all data?', 'Removes cached news and settings from this phone.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Clear', style: 'destructive', onPress: onClearData },
     ]);
+  };
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
@@ -98,6 +104,8 @@ export default function SettingsScreen() {
             <Switch value={settings.keepAwake} onValueChange={(v) => onChange({ ...settings, keepAwake: v })} />
           </View>
 
+          {!IS_WEB && (
+            <>
           <Text style={styles.h2}>Alerts when the app is closed</Text>
           <View style={styles.row}>
             {ALERT_OPTIONS.map((o) => (
@@ -125,6 +133,8 @@ export default function SettingsScreen() {
             The phone checks in the background about every 15 minutes at best. Android and iOS decide the exact timing
             and may check less often to save battery, so alerts are not instant. Keep the app open for live updates.
           </Text>
+            </>
+          )}
 
           {GROUPS.map((g) => (
             <View key={g.title}>
@@ -144,6 +154,8 @@ export default function SettingsScreen() {
           ))}
 
           <Text style={styles.h2}>Privacy</Text>
+          {!IS_WEB && (
+            <>
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>App lock</Text>
@@ -158,6 +170,15 @@ export default function SettingsScreen() {
             </View>
             <Switch value={settings.hideScreen} onValueChange={(v) => onChange({ ...settings, hideScreen: v })} />
           </View>
+            </>
+          )}
+          {IS_WEB && (
+            <Text style={[styles.p, { marginBottom: 8 }]}>
+              Website version: browsers can’t read these sites directly, so requests pass through this site’s server on
+              Expo’s hosting, which can see your IP address and keeps logs for 7 days. For the most privacy, and for alerts
+              and the app lock, use the phone app.
+            </Text>
+          )}
           <Text style={styles.p}>
             • No account, no login, no analytics, no ads, no tracking SDKs.{'\n'}
             • No middle server: your phone fetches each feed directly from the official website over HTTPS.{'\n'}

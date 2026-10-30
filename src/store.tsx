@@ -15,6 +15,8 @@ import { matchWatch } from './watchlist';
 
 /** Re-lock after the app has been in the background this long (allows opening articles). */
 const RELOCK_AFTER_MS = 60 * 1000;
+/** The website's requests all go through its server, which has a monthly limit */
+const MIN_INTERVAL_SEC = Platform.OS === 'web' ? 120 : 0;
 
 export function openLink(url: unknown) {
   if (typeof url !== 'string' || !/^https:\/\//i.test(url)) return;
@@ -116,7 +118,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     let active = AppState.currentState === 'active';
-    const tick = setInterval(() => active && refresh(), settings.intervalSec * 1000);
+    const tick = setInterval(() => active && refresh(), Math.max(settings.intervalSec, MIN_INTERVAL_SEC) * 1000);
     const clock = setInterval(() => active && setNow(Date.now()), 15000);
     const sub = AppState.addEventListener('change', (st) => {
       const wasActive = active;
@@ -148,6 +150,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Block screenshots; on Android this also blanks the recent-apps preview
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     if (settings.hideScreen) {
       ScreenCapture.preventScreenCaptureAsync('tw').catch(() => {});
       if (Platform.OS === 'ios') ScreenCapture.enableAppSwitcherProtectionAsync(0.9).catch(() => {});
@@ -159,6 +162,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Tapping an alert opens its article (also when the tap launched the app); waits for unlock if locked
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     const open = (url: unknown) => {
       if (lockedRef.current) pendingLink.current = url;
       else openLink(url);

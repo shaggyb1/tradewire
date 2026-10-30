@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LockScreen from '../components/LockScreen';
 import { StoreProvider, useStore } from '../store';
@@ -27,7 +27,7 @@ export default function RootLayout() {
               headerShown: false,
               tabBarActiveTintColor: C.text,
               tabBarInactiveTintColor: C.muted,
-              tabBarStyle: { backgroundColor: C.card, borderTopColor: C.cardBorder },
+              tabBarStyle: { backgroundColor: C.card, borderTopColor: C.cardBorder, ...(Platform.OS === 'web' ? { height: 64, paddingBottom: 8 } : null) },
               tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
               sceneStyle: { backgroundColor: C.bg },
             }}

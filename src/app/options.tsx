@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bar, IntradayChart } from '../components/Charts';
 import { intraday } from '../indicators';
@@ -10,7 +10,7 @@ import { useStore } from '../store';
 import { C } from '../theme';
 import { istClock, nseState } from '../time';
 
-const REFRESH_MS = 60 * 1000;
+const REFRESH_MS = (Platform.OS === 'web' ? 120 : 60) * 1000;
 const fmt = (n: number, d = 2) => n.toLocaleString('en-IN', { maximumFractionDigits: d });
 /** OI in lakh contracts-units, e.g. 1,46,529 → 1.47L */
 const lakh = (n: number) => (Math.abs(n) >= 100000 ? `${(n / 100000).toFixed(2)}L` : Math.abs(n) >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));

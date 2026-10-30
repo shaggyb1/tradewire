@@ -33,6 +33,7 @@ export function ago(t: number, now: number): string {
 
 export function itemTime(item: NewsItem, now: number): string {
   if (item.timeKind === 'date') return istDay(item.time);
+  if (item.timeKind === 'unknown') return 'time not published';
   if (item.timeKind === 'seen') return `seen ${istClock(item.time)} IST`;
   const sameDay = istDay(item.time) === istDay(now);
   return `${ago(item.time, now)} · ${sameDay ? '' : istDay(item.time) + ' '}${istClock(item.time)} IST`;

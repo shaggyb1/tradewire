@@ -33,14 +33,19 @@ const DAY_MS = 24 * 3600 * 1000;
 const SESSION_START_MIN = 555;
 const SESSION_END_MIN = 930;
 
-/** Groups minute ticks into N-minute candles (normal session 9:15–15:30 IST only). */
+/** True for ticks in the normal session, 9:15–15:30 IST. NSE flags only part of the pre-open, and keeps ticking after the close. */
+export function inSession({ t, normal }: Tick): boolean {
+  const mins = ((t + IST_MS) % DAY_MS) / 60000;
+  return normal && mins >= SESSION_START_MIN && mins < SESSION_END_MIN;
+}
+
+/** Groups minute ticks into N-minute candles (normal session only). */
 export function toCandles(ticks: Tick[], minutes = 5): Candle[] {
   const size = minutes * 60000;
   const out: Candle[] = [];
-  for (const { t, price, normal } of ticks) {
-    // NSE flags only part of the pre-open, and keeps ticking in the post-close session
-    const mins = ((t + IST_MS) % DAY_MS) / 60000;
-    if (!normal || mins < SESSION_START_MIN || mins >= SESSION_END_MIN) continue;
+  for (const tick of ticks) {
+    if (!inSession(tick)) continue;
+    const { t, price } = tick;
     const bucket = Math.floor(t / size) * size;
     const last = out[out.length - 1];
     if (last && last.t === bucket) {

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import Svg, { G, Line, Path, Rect } from 'react-native-svg';
+import { inSession } from '../indicators';
 import type { DayMood } from '../insights';
 import type { Tick } from '../nse';
 import { C } from '../theme';
@@ -20,7 +21,7 @@ interface LineProps {
 
 /** Minute prices for the session with a dashed previous-close line. Touch and drag to read values. */
 export function IntradayChart({ ticks, prevClose, width, height = 150 }: LineProps) {
-  const pts = useMemo(() => ticks.filter((t) => t.normal), [ticks]);
+  const pts = useMemo(() => ticks.filter(inSession), [ticks]);
   const [hover, setHover] = useState<number | null>(null);
   if (pts.length < 2) return <Text style={styles.empty}>No intraday data yet</Text>;
 
@@ -52,15 +53,13 @@ export function IntradayChart({ ticks, prevClose, width, height = 150 }: LinePro
       <Text style={styles.readout}>
         {h
           ? `${hm(h.t)} IST · ${fmt(h.price)} (${h.price >= prevClose ? '▲' : '▼'} ${fmt(Math.abs(h.price - prevClose))})`
-          : 'Touch the chart to read a price'}
+          : 'Tap or drag on the chart to read a price'}
       </Text>
       <View
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
         onResponderGrant={onTouch}
         onResponderMove={onTouch}
-        onResponderRelease={() => setHover(null)}
-        onResponderTerminate={() => setHover(null)}
         accessibilityLabel={`Intraday chart. Last ${fmt(last)}, previous close ${fmt(prevClose)}`}
       >
         <Svg width={width} height={height}>
@@ -101,7 +100,7 @@ export function MoodTrendChart({ days, width, height = 120 }: MoodProps) {
   const maxV = Math.max(1, ...days.map((d) => Math.max(d.up, d.down)));
   const half = height / 2;
   const col = width / days.length;
-  const barW = Math.min(18, col - 8);
+  const barW = Math.max(2, Math.min(18, col - 8));
   const s = sel != null ? days[sel] : null;
 
   return (
@@ -120,11 +119,15 @@ export function MoodTrendChart({ days, width, height = 120 }: MoodProps) {
               {/* 1px gap either side of the baseline keeps the two arms visually separate */}
               {hu > 0 && <Rect x={cx - barW / 2} y={half - 1 - hu} width={barW} height={hu} rx={4} fill={C.upMark} opacity={sel == null || sel === i ? 1 : 0.4} />}
               {hd > 0 && <Rect x={cx - barW / 2} y={half + 1} width={barW} height={hd} rx={4} fill={C.downMark} opacity={sel == null || sel === i ? 1 : 0.4} />}
-              <Rect x={col * i} y={0} width={col} height={height} fill="transparent" onPress={() => setSel(sel === i ? null : i)} />
             </G>
           );
         })}
       </Svg>
+      <View style={[styles.hitRow, { height }]}>
+        {days.map((d, i) => (
+          <Pressable key={d.date} style={styles.hit} onPress={() => setSel(sel === i ? null : i)} accessibilityLabel={`${d.date}: ${d.up} bullish, ${d.down} bearish`} />
+        ))}
+      </View>
       <View style={styles.axisRow}>
         {days.map((d) => (
           <Text key={d.date} style={[styles.axis, { width: col, textAlign: 'center' }]}>
@@ -155,6 +158,8 @@ export function Bar({ value, max, color, align = 'left' }: { value: number; max:
 }
 
 const styles = StyleSheet.create({
+  hitRow: { position: 'absolute', left: 0, right: 0, top: 23, flexDirection: 'row' },
+  hit: { flex: 1 },
   empty: { color: C.muted, fontSize: 12, paddingVertical: 24, textAlign: 'center' },
   readout: { color: C.muted, fontSize: 12, marginBottom: 6 },
   axisRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },

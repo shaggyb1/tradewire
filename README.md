@@ -10,6 +10,7 @@ All tags and indicators are keyword-based triage from headline wording. They are
 
 | Version | What's new |
 |---|---|
+| 1.4.0 | Website version from the same code. Fixes: intraday chart limited to 9:15–15:30, undated older items no longer jump to the top, chart taps keep their reading |
 | 1.3.0 | Bottom tabs (News · Insights · Options · Calendar · Settings). **Insights:** event-risk meter, 7-day mood trend, sector heatmap with NSE sector moves, watchlist news trend. **Options:** Nifty / Bank Nifty / Fin Nifty / Midcap Nifty option chain (PCR, max pain, call/put walls, OI build-up, ATM IV, implied move) and intraday indicators (EMA 9/21, RSI 14, Supertrend, opening range, day range) with a touch chart. Colour-blind-safe blue/red up/down colours |
 | 1.2.0 | ★ Watchlist, 📅 market calendar (RBI, Fed, CPI/IIP/GDP, F&O expiries, holidays, watchlist results), app lock, hidden screen, NSE holiday-aware market status |
 | 1.1.0 | Bullish / Bearish indicator, 24h news-mood gauge |
@@ -33,6 +34,8 @@ No account, analytics, ads or backend server. The phone fetches each feed direct
 npm install
 npx expo start
 ```
+
+Run the website locally with `npx expo start --web`; browsers can’t read the feeds directly, so it uses the server routes in `src/app/api/`. Publish it with `npx expo export --platform web` then `npx eas-cli deploy`.
 
 Build a new APK with `npx eas-cli build -p android --profile preview`.
 

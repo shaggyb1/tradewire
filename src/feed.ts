@@ -1,6 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { Source } from './sources';
 import { analyze, type Impact } from './impact';
+import { fetchFeedText } from './transport';
 
 export interface NewsItem {
   id: string;
@@ -9,17 +10,13 @@ export interface NewsItem {
   summary: string;
   link: string;
   time: number;
-  /** exact = from feed; date = day only (from URL); seen = feed has no date, time is when we first saw it */
-  timeKind: 'exact' | 'date' | 'seen';
+  /**
+   * exact = from feed; date = day only (from URL); seen = feed has no date, time is when we first saw it;
+   * unknown = no date and already published when we first read the feed, so its age can't be known
+   */
+  timeKind: 'exact' | 'date' | 'seen' | 'unknown';
   impact: Impact;
 }
-
-// A common mobile-browser user agent, so requests look like any other phone
-// and don't carry an app-specific fingerprint.
-const USER_AGENT =
-  'Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36';
-
-const TIMEOUT_MS = 15000;
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -134,6 +131,7 @@ export function parseFeed(xml: string, src: Source, now = Date.now()): NewsItem[
     if (time == null) {
       // e.g. the Fed feed leaves pubDate empty but puts YYYYMMDD in the URL; PIB has no date at all
       const d = /(20\d{2})(\d{2})(\d{2})/.exec(link);
+      if (!d && !src.undated) continue;
       time = d ? Date.UTC(+d[1], +d[2] - 1, +d[3], 12) : now;
       timeKind = d ? 'date' : 'seen';
     }
@@ -155,21 +153,5 @@ export function parseFeed(xml: string, src: Source, now = Date.now()): NewsItem[
 }
 
 export async function fetchSource(src: Source): Promise<NewsItem[]> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-  try {
-    const res = await fetch(src.url, {
-      signal: ctrl.signal,
-      headers: {
-        'User-Agent': USER_AGENT,
-        Accept: 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
-        'Cache-Control': 'no-cache',
-      },
-      credentials: 'omit',
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return parseFeed(await res.text(), src);
-  } finally {
-    clearTimeout(timer);
-  }
+  return parseFeed(await fetchFeedText(src), src);
 }
