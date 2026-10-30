@@ -29,6 +29,7 @@ export default function RootLayout() {
           <Tabs
             screenOptions={{
               headerShown: false,
+              animation: 'fade',
               tabBarActiveTintColor: C.accent,
               tabBarInactiveTintColor: C.muted,
               tabBarStyle: { backgroundColor: C.card, borderTopColor: C.cardBorder, ...(Platform.OS === 'web' ? { height: 64, paddingBottom: 8 } : null) },

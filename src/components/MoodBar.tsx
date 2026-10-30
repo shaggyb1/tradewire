@@ -1,4 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCountUp } from '../motion';
 import { C } from '../theme';
 
 interface Props {
@@ -11,6 +13,14 @@ interface Props {
 /** Bullish vs bearish headline count. Tap a side to show only those headlines. */
 export default function MoodBar({ up, down, filter, onFilter }: Props) {
   const total = up + down;
+  const shownUp = useCountUp(up);
+  const shownDown = useCountUp(down);
+  const [fill] = useState(() => new Animated.Value(0.5));
+  const target = total ? up / total : 0.5;
+  // The split slides to its new position instead of jumping
+  useEffect(() => {
+    Animated.timing(fill, { toValue: target, duration: 800, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+  }, [fill, target]);
   if (total === 0 && filter === null) return null;
 
   const share = total ? up / total : 0.5;
@@ -26,12 +36,12 @@ export default function MoodBar({ up, down, filter, onFilter }: Props) {
         <Text style={[styles.verdict, { color: verdictColor }]}>{verdict}</Text>
       </View>
       <View style={styles.bar}>
-        <View style={{ flex: Math.max(share, 0.02), backgroundColor: C.bull }} />
-        <View style={{ flex: Math.max(1 - share, 0.02), backgroundColor: C.bear }} />
+        <Animated.View style={{ width: fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }), backgroundColor: C.bull }} />
+        <View style={{ flex: 1, backgroundColor: C.bear }} />
       </View>
       <View style={styles.row}>
         <Pressable onPress={() => toggle(1)} hitSlop={8} style={[styles.side, filter === 1 && styles.sideOn]}>
-          <Text style={[styles.count, { color: C.bull }]}>▲ {up} bullish</Text>
+          <Text style={[styles.count, { color: C.bull }]}>▲ {shownUp} bullish</Text>
         </Pressable>
         {filter !== null && (
           <Pressable onPress={() => onFilter(null)} hitSlop={8}>
@@ -39,7 +49,7 @@ export default function MoodBar({ up, down, filter, onFilter }: Props) {
           </Pressable>
         )}
         <Pressable onPress={() => toggle(-1)} hitSlop={8} style={[styles.side, filter === -1 && styles.sideOn]}>
-          <Text style={[styles.count, { color: C.bear }]}>▼ {down} bearish</Text>
+          <Text style={[styles.count, { color: C.bear }]}>▼ {shownDown} bearish</Text>
         </Pressable>
       </View>
     </View>

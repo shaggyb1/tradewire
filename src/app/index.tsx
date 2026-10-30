@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { FlatList, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Animated, FlatList, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, TextInput, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Hero, { PulseDot } from '../components/Hero';
 import { Logo } from '../components/Icons';
+import LiveWire from '../components/LiveWire';
 import MoodBar from '../components/MoodBar';
 import NewsCard from '../components/NewsCard';
 import RiskStrip from '../components/RiskStrip';
@@ -31,6 +33,14 @@ export default function NewsScreen() {
   const [toneFilter, setToneFilter] = useState<1 | -1 | null>(null);
   const listRef = useRef<FlatList<NewsItem>>(null);
   const wide = useWindowDimensions().width >= 700;
+  const [progress] = useState(() => new Animated.Value(0));
+  const onScroll = useCallback(
+    ({ nativeEvent: e }: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const range = e.contentSize.height - e.layoutMeasurement.height;
+      progress.setValue(range > 0 ? Math.min(1, Math.max(0, e.contentOffset.y / range)) : 0);
+    },
+    [progress],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -78,8 +88,13 @@ export default function NewsScreen() {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
       <TickerTape />
+      <View style={styles.progressTrack}>
+        <Animated.View style={[styles.progressFill, { transform: [{ scaleX: progress }] }]} />
+      </View>
       <FlatList
         ref={listRef}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         data={visible}
         keyExtractor={(i) => i.id}
         renderItem={({ item }) => (
@@ -122,19 +137,16 @@ export default function NewsScreen() {
                   </Text>
                 </View>
           
-                <View style={styles.hero}>
-                  <Text style={styles.eyebrow}>Official sources · India & global</Text>
-                  <Text style={[styles.heroTitle, wide && styles.heroTitleWide]}>
-                    Market news, <Text style={styles.mark}> from the source. </Text>
-                  </Text>
+                <Hero wide={wide}>
+                  <PulseDot color={loading ? C.med : C.open} />
                   <Text style={styles.updated}>
-                    <Text style={{ color: loading ? C.med : C.open }}>● </Text>
                     {loading ? 'Updating…' : lastUpdated ? `Updated ${istClock(lastUpdated, true)} IST` : 'Connecting…'}
                     {' · '}
                     {enabledSources.length - failed} of {enabledSources.length} sources live
                     {failed > 0 && <Text style={{ color: C.high }}>{` · ${failed} failed`}</Text>}
                   </Text>
-                </View>
+                </Hero>
+                <LiveWire items={items} now={now} enabled={settings.enabled} />
           
                 <TextInput
                   value={query}
@@ -213,12 +225,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   logo: { color: C.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
-  hero: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 18, gap: 8 },
-  eyebrow: { color: C.accent, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
-  heroTitle: { color: C.text, fontSize: 36, lineHeight: 42, fontWeight: '700', letterSpacing: -1.2 },
-  heroTitleWide: { fontSize: 60, lineHeight: 68, letterSpacing: -2.4 },
-  mark: { backgroundColor: C.accent, color: C.accentInk },
-  updated: { color: C.muted, fontSize: 12, marginTop: 2 },
+  updated: { color: C.muted, fontSize: 12 },
+  progressTrack: { height: 2, backgroundColor: 'transparent' },
+  progressFill: { height: 2, backgroundColor: C.accent, transformOrigin: 'left' },
   market: { color: C.muted, fontSize: 11, fontWeight: '700', borderColor: C.none, borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   search: { backgroundColor: C.card, color: C.text, marginHorizontal: 12, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 15 },
   tabs: { flexDirection: 'row', marginHorizontal: 12, marginTop: 10, backgroundColor: C.card, borderRadius: 10, padding: 3 },

@@ -1,8 +1,9 @@
 import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NewsItem } from '../feed';
 import { SOURCE_BY_ID } from '../sources';
 import { C, LEVEL_COLOR, LEVEL_LABEL } from '../theme';
+import { riseStyle, useEntrance } from '../motion';
 import { itemTime } from '../time';
 
 interface Props {
@@ -22,11 +23,13 @@ function NewsCard({ item, now, isNew, watched, onOpen, onShare }: Props) {
   const toneColor = tone.dir > 0 ? C.bull : tone.dir < 0 ? C.bear : C.muted;
   const toneLabel =
     tone.dir > 0 ? `▲ ${tone.strength === 2 ? 'Strongly ' : ''}Bullish` : tone.dir < 0 ? `▼ ${tone.strength === 2 ? 'Strongly ' : ''}Bearish` : '◆ Mixed signals';
+  const enter = useEntrance(0, 320);
   return (
+    <Animated.View style={riseStyle(enter, 10)}>
     <Pressable
       onPress={() => onOpen(item)}
       onLongPress={() => onShare(item)}
-      style={({ pressed }) => [styles.card, !!watched && styles.cardWatched, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [styles.card, !!watched && styles.cardWatched, pressed && styles.pressed]}
       accessibilityRole="link"
     >
       <View style={[styles.bar, { backgroundColor: LEVEL_COLOR[level] }]} />
@@ -80,6 +83,7 @@ function NewsCard({ item, now, isNew, watched, onOpen, onShare }: Props) {
         {sectors.length > 0 && <Text style={styles.sectors}>Sensitive: {sectors.join(' · ')}</Text>}
       </View>
     </Pressable>
+    </Animated.View>
   );
 }
 
@@ -96,6 +100,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     overflow: 'hidden',
   },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.985 }] },
   cardWatched: { borderColor: C.accent, borderWidth: 1 },
   watchTag: { color: C.accent, fontSize: 11, fontWeight: '800', flexShrink: 1 },
   bar: { width: 4 },
