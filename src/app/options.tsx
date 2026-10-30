@@ -59,11 +59,7 @@ export default function OptionsScreen() {
   }, [symbol, retryCount]);
 
   const load = useCallback(async () => {
-    if (!expiry) {
-      setRetryCount((n) => n + 1);
-      return;
-    }
-    if (busy.current) return;
+    if (!expiry || busy.current) return;
     busy.current = true;
     setLoading(true);
     const [c, t, q] = await Promise.allSettled([getChain(symbol, expiry), getIndexTicks(meta.index), getAllIndices()]);
@@ -76,6 +72,9 @@ export default function OptionsScreen() {
     setLoading(false);
     busy.current = false;
   }, [symbol, expiry, meta.index]);
+
+  // Manual refresh: if even the expiry list failed to load, start again from there
+  const retry = () => (expiry ? load() : setRetryCount((n) => n + 1));
 
   // Load when the tab is open; refresh every minute during market hours
   useFocusEffect(
@@ -104,7 +103,7 @@ export default function OptionsScreen() {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.accent} colors={[C.accent]} />}>
+      <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={retry} tintColor={C.accent} colors={[C.accent]} />}>
         <View style={styles.row}>
           {OPTION_SYMBOLS.map((s) => (
             <Pressable key={s.symbol} onPress={() => selectSymbol(s.symbol)} style={[styles.chip, symbol === s.symbol && styles.chipOn]}>
@@ -126,7 +125,7 @@ export default function OptionsScreen() {
           <View style={[styles.card, { borderColor: C.high, borderWidth: 1 }]}>
             <Text style={{ color: C.high, fontWeight: '700' }}>Couldn’t load NSE data</Text>
             <Text style={styles.small}>{error}</Text>
-            <Pressable onPress={load} style={[styles.chip, styles.retry]} accessibilityRole="button">
+            <Pressable onPress={retry} style={[styles.chip, styles.retry]} accessibilityRole="button">
               <Text style={styles.chipText}>Retry</Text>
             </Pressable>
           </View>
@@ -179,6 +178,11 @@ export default function OptionsScreen() {
         )}
 
         {/* Option chain analysis */}
+        {chain && !stats && (
+          <View style={styles.card}>
+            <Text style={styles.small}>NSE has no option data for this expiry right now. Try another expiry.</Text>
+          </View>
+        )}
         {stats && chain && (
           <>
             <Text style={styles.h2}>

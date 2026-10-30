@@ -61,11 +61,12 @@ export interface Tick {
 
 // ---------- endpoints ----------
 
+/** `index` is the name NSE's chart service uses, which can differ from its index list. */
 export const OPTION_SYMBOLS = [
   { symbol: 'NIFTY', index: 'NIFTY 50', label: 'Nifty' },
   { symbol: 'BANKNIFTY', index: 'NIFTY BANK', label: 'Bank Nifty' },
-  { symbol: 'FINNIFTY', index: 'NIFTY FINANCIAL SERVICES', label: 'Fin Nifty' },
-  { symbol: 'MIDCPNIFTY', index: 'NIFTY MIDCAP SELECT', label: 'Midcap Nifty' },
+  { symbol: 'FINNIFTY', index: 'NIFTY FIN SERVICE', label: 'Fin Nifty' },
+  { symbol: 'MIDCPNIFTY', index: 'NIFTY MID SELECT', label: 'Midcap Nifty' },
 ] as const;
 export type OptionSymbol = (typeof OPTION_SYMBOLS)[number]['symbol'];
 

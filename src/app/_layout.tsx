@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { useSyncExternalStore } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -20,7 +21,14 @@ function LockOverlay() {
   return locked ? <LockScreen onUnlock={unlock} /> : null;
 }
 
+const noSubscribe = () => () => {};
+
 export default function RootLayout() {
+  // On web the first HTML is built ahead of time, when today's time and the screen size aren't known.
+  // Waiting for the browser avoids a mismatch that forces React to redo the whole page.
+  const inBrowser = useSyncExternalStore(noSubscribe, () => true, () => false);
+  if (!inBrowser) return <View style={styles.root} />;
+
   return (
     <SafeAreaProvider>
       <StoreProvider>

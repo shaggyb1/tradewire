@@ -3,6 +3,8 @@ import type { Source } from './sources';
 // Browsers can't read these sites directly (CORS), so requests go through this site's own server routes.
 
 const TIMEOUT_MS = 20000;
+/** Must not exceed MAX_BATCH in app/api/feeds+api.ts */
+const BATCH_SIZE = 8;
 
 async function timedFetch(url: string): Promise<Response> {
   const ctrl = new AbortController();
@@ -16,12 +18,61 @@ async function timedFetch(url: string): Promise<Response> {
   }
 }
 
-export async function fetchFeedText(src: Source): Promise<string> {
-  const res = await timedFetch(`/api/feed?id=${encodeURIComponent(src.id)}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+function friendly(res: Response): Error {
+  return new Error(res.status === 429 ? 'Too many requests right now. Try again in a minute' : `HTTP ${res.status}`);
+}
+
+async function fetchOne(id: string): Promise<string> {
+  const res = await timedFetch(`/api/feed?id=${encodeURIComponent(id)}`);
+  if (!res.ok) throw friendly(res);
   return res.text();
 }
 
-export function nseFetch(path: string): Promise<Response> {
-  return timedFetch(`/api/nse?path=${encodeURIComponent(path)}`);
+interface Waiter {
+  id: string;
+  resolve: (text: string) => void;
+  reject: (e: Error) => void;
+}
+
+let queue: Waiter[] = [];
+
+async function sendBatch(batch: Waiter[]) {
+  try {
+    const res = await timedFetch(`/api/feeds?ids=${batch.map((w) => encodeURIComponent(w.id)).join(',')}`);
+    if (res.status === 429) throw friendly(res);
+    if (!res.ok) throw new Error('batch failed');
+    const data = (await res.json()) as Record<string, { text?: string; error?: string }>;
+    for (const w of batch) {
+      const r = data[w.id];
+      if (r?.text != null) w.resolve(r.text);
+      else w.reject(new Error(r?.error ?? 'No data'));
+    }
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith('Too many')) {
+      batch.forEach((w) => w.reject(e as Error));
+      return;
+    }
+    // The batch itself failed (e.g. too much data at once): fetch these one by one
+    for (const w of batch) fetchOne(w.id).then(w.resolve, w.reject);
+  }
+}
+
+/** Feeds requested together are sent together, in batches, to use far fewer requests. */
+export function fetchFeedText(src: Source): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!queue.length) {
+      setTimeout(() => {
+        const all = queue;
+        queue = [];
+        for (let i = 0; i < all.length; i += BATCH_SIZE) sendBatch(all.slice(i, i + BATCH_SIZE));
+      }, 0);
+    }
+    queue.push({ id: src.id, resolve, reject });
+  });
+}
+
+export async function nseFetch(path: string): Promise<Response> {
+  const res = await timedFetch(`/api/nse?path=${encodeURIComponent(path)}`);
+  if (res.status === 429) throw friendly(res);
+  return res;
 }

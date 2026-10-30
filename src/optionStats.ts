@@ -22,8 +22,10 @@ export interface ChainStats {
   totalPutOI: number;
 }
 
-export function chainStats(chain: Chain): ChainStats {
+/** Null when the chain has no strikes, e.g. right after an expiry. */
+export function chainStats(chain: Chain): ChainStats | null {
   const rows = chain.rows.filter((r) => r.CE || r.PE).sort((a, b) => a.strikePrice - b.strikePrice);
+  if (!rows.length) return null;
   const strikes = rows.map((r) => r.strikePrice);
   const step = strikes.length > 1 ? Math.min(...strikes.slice(1).map((s, i) => s - strikes[i]).filter((d) => d > 0)) : 50;
   const atmRow = rows.reduce((best, r) => (Math.abs(r.strikePrice - chain.spot) < Math.abs(best.strikePrice - chain.spot) ? r : best), rows[0]);

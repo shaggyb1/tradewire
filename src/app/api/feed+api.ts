@@ -4,7 +4,9 @@ const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 
 /** Web only. Takes a source id, never a URL, so this can't be used to fetch arbitrary sites. */
 export async function GET(request: Request) {
-  const src = SOURCE_BY_ID[new URL(request.url).searchParams.get('id') ?? ''];
+  const id = new URL(request.url).searchParams.get('id') ?? '';
+  // hasOwn, so names like __proto__ aren't mistaken for sources
+  const src = Object.hasOwn(SOURCE_BY_ID, id) ? SOURCE_BY_ID[id] : null;
   if (!src) return new Response('Unknown source', { status: 404 });
   try {
     const res = await fetch(src.url, {
