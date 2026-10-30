@@ -35,7 +35,7 @@ npm install
 npx expo start
 ```
 
-Run the website locally with `npx expo start --web`; browsers can’t read the feeds directly, so it uses the server routes in `src/app/api/`. Publish it with `npx expo export --platform web` then `npx eas-cli deploy`.
+The website is live at https://tradewire.expo.app. Run it locally with `npx expo start --web`; browsers can’t read the feeds directly, so it uses the server routes in `src/app/api/`. Publish it with `npx expo export --platform web` then `npx eas-cli deploy`.
 
 Build a new APK with `npx eas-cli build -p android --profile preview`.
 
