@@ -28,6 +28,7 @@ export default function OptionsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const busy = useRef(false);
 
   const meta = OPTION_SYMBOLS.find((s) => s.symbol === symbol)!;
@@ -41,7 +42,7 @@ export default function OptionsScreen() {
     setSymbol(s);
   };
 
-  // New symbol → load its expiries and pick the nearest
+  // New symbol, or a retry after a failure → load its expiries and pick the nearest
   useEffect(() => {
     let cancelled = false;
     getExpiries(symbol)
@@ -49,15 +50,20 @@ export default function OptionsScreen() {
         if (cancelled) return;
         setExpiries(list.slice(0, 4));
         setExpiry(list[0] ?? null);
+        setError(null);
       })
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : String(e)));
     return () => {
       cancelled = true;
     };
-  }, [symbol]);
+  }, [symbol, retryCount]);
 
   const load = useCallback(async () => {
-    if (!expiry || busy.current) return;
+    if (!expiry) {
+      setRetryCount((n) => n + 1);
+      return;
+    }
+    if (busy.current) return;
     busy.current = true;
     setLoading(true);
     const [c, t, q] = await Promise.allSettled([getChain(symbol, expiry), getIndexTicks(meta.index), getAllIndices()]);
@@ -119,7 +125,10 @@ export default function OptionsScreen() {
         {error && (
           <View style={[styles.card, { borderColor: C.high, borderWidth: 1 }]}>
             <Text style={{ color: C.high, fontWeight: '700' }}>Couldn’t load NSE data</Text>
-            <Text style={styles.small}>{error}. Pull down to retry.</Text>
+            <Text style={styles.small}>{error}</Text>
+            <Pressable onPress={load} style={[styles.chip, styles.retry]} accessibilityRole="button">
+              <Text style={styles.chipText}>Retry</Text>
+            </Pressable>
           </View>
         )}
 
@@ -263,6 +272,7 @@ const styles = StyleSheet.create({
   chip: { backgroundColor: C.chip, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16 },
   chipSmall: { paddingHorizontal: 10, paddingVertical: 5 },
   chipOn: { backgroundColor: C.chipActive },
+  retry: { alignSelf: 'flex-start', marginTop: 8, backgroundColor: C.chipActive },
   chipText: { color: C.text, fontWeight: '600', fontSize: 13 },
   chipTextSmall: { color: C.text, fontSize: 12 },
   card: { backgroundColor: C.card, borderRadius: 14, padding: 12, marginTop: 8, borderWidth: 1, borderColor: C.cardBorder },

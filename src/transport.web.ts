@@ -9,6 +9,8 @@ async function timedFetch(url: string): Promise<Response> {
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
     return await fetch(url, { signal: ctrl.signal });
+  } catch {
+    throw new Error("Can't reach the TradeWire server. Check your connection and try again");
   } finally {
     clearTimeout(timer);
   }
