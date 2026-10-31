@@ -17,6 +17,8 @@ interface ToneRule {
   dir: 1 | -1;
   re: RegExp;
   why: string;
+  /** Replaces `why` when this comes from one company's exchange filing */
+  filingWhy?: string;
   /** Company-level rule: only meaningful for Indian sources */
   local?: boolean;
   /** Sectors this news usually pushes up / down */
@@ -73,7 +75,7 @@ const RULES: ToneRule[] = [
   { dir: -1, re: near('(net profit|profit|revenue|earnings|sales)', DOWN), why: 'Results weaken → stock −', local: true },
   { dir: -1, re: /\b(net loss|posts? (a )?loss|widens? loss)\b/i, why: 'Loss reported → stock −', local: true },
   { dir: -1, re: /\b(penalty|penalt\w+|debar\w*|ban(ned)? from|suspend\w*|suspension|show cause|fraud|raids?|probe|investigation|charged)\b/i, why: 'Regulatory action → stock −', local: true },
-  { dir: -1, re: /\b(default(ed|s)?|insolvency|bankrupt\w*|NCLT admits|moratorium)\b/i, why: 'Credit stress → −Banks, NBFCs', local: true, down: ['Banks', 'NBFCs'] },
+  { dir: -1, re: /\b(default(ed|s)?|insolvency|bankrupt\w*|NCLT admits|moratorium)\b/i, why: 'Credit stress → −Banks, NBFCs', filingWhy: 'Credit stress → stock −', local: true, down: ['Banks', 'NBFCs'] },
 
   // Market moves reported by media
   { dir: 1, re: near('(sensex|nifty|markets?|stocks?|shares?|indices)', '(gains?|gained|rall\\w+|jumps?|jumped|surges?|surged|climbs?|climbed|soars?|soared|rises?|rose|skyrockets?)', 30), why: 'Market moving up', up: ['Broad market'] },
@@ -85,18 +87,21 @@ const RULES: ToneRule[] = [
 const NEGATION_BEFORE = /\b(no|not|unlikely|without|rules? out|ruled out|denies|halts?)\b[^.]{0,12}$/i;
 const NEGATION_INSIDE = /\b(no|not|unlikely|fails? to|failed to)\b/i;
 
-export function analyzeTone(text: string, india: boolean): Tone {
+/** `filing`: one company's exchange filing, which says something about that stock, not the economy or a whole sector. */
+export function analyzeTone(text: string, india: boolean, filing = false): Tone {
   let up = 0;
   let down = 0;
   const reasons: string[] = [];
   const sectors: Record<string, number> = {};
   for (const r of RULES) {
-    if (r.local && !india) continue;
+    if ((r.local && !india) || (filing && !r.local)) continue;
     const m = r.re.exec(text);
     if (!m || NEGATION_INSIDE.test(m[0]) || NEGATION_BEFORE.test(text.slice(Math.max(0, m.index - 25), m.index))) continue;
     if (r.dir > 0) up++;
     else down++;
-    if (!reasons.includes(r.why)) reasons.push(r.why);
+    const why = filing ? (r.filingWhy ?? r.why) : r.why;
+    if (!reasons.includes(why)) reasons.push(why);
+    if (filing) continue;
     r.up?.forEach((x) => (sectors[x] = (sectors[x] ?? 0) + 1));
     r.down?.forEach((x) => (sectors[x] = (sectors[x] ?? 0) - 1));
   }

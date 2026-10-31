@@ -8,6 +8,8 @@ import { C } from '../theme';
 
 const WAVE_H = 150;
 const FRAME_MS = 40;
+/** The orbs reach past the edge. In a browser, 'hidden' can still be scrolled sideways; 'clip' can't. */
+const CLIP = (Platform.OS === 'web' ? 'clip' : 'hidden') as 'hidden';
 
 /** Slow market-like lines drifting behind the headline. Purely decorative, not real prices. */
 function SignalWave() {
@@ -124,26 +126,31 @@ function Word({ delay, big, huge, children }: { delay: number; big: boolean; hug
 }
 
 export default function Hero({ aside, children }: { aside?: ReactNode; children: ReactNode }) {
-  const { wide, contentWidth } = useLayout();
+  const { wide, compact, contentWidth } = useLayout();
   const a = useEntrance(0);
   const c = useEntrance(620);
   const d = useEntrance(460, 620);
   const big = contentWidth >= 700;
   const huge = contentWidth >= 1250;
   return (
-    <View style={styles.hero}>
+    <View style={[styles.hero, compact && styles.heroCompact]}>
       <Aurora />
       <SignalWave />
       <View style={[styles.inner, wide && styles.innerWide]}>
         <View style={wide ? styles.copyWide : undefined}>
-          <Animated.Text style={[styles.eyebrow, riseStyle(a)]}>Official sources · India & global</Animated.Text>
-          <View style={styles.words}>
-            <Word delay={60} big={big} huge={huge}>Market</Word>
-            <Word delay={180} big={big} huge={huge}>news,</Word>
-            <Word delay={300} big={big} huge={huge}>
-              <Highlight> from the source. </Highlight>
-            </Word>
-          </View>
+          {/* On a phone the first screen belongs to the news */}
+          {!compact && (
+            <>
+              <Animated.Text style={[styles.eyebrow, riseStyle(a)]}>Official sources · India & global</Animated.Text>
+              <View style={styles.words}>
+                <Word delay={60} big={big} huge={huge}>Market</Word>
+                <Word delay={180} big={big} huge={huge}>news,</Word>
+                <Word delay={300} big={big} huge={huge}>
+                  <Highlight> from the source. </Highlight>
+                </Word>
+              </View>
+            </>
+          )}
           <Animated.View style={[styles.status, riseStyle(c)]}>{children}</Animated.View>
         </View>
         {!!aside && <Animated.View style={[wide ? styles.asideWide : styles.aside, riseStyle(d, 22)]}>{aside}</Animated.View>}
@@ -153,14 +160,15 @@ export default function Hero({ aside, children }: { aside?: ReactNode; children:
 }
 
 const styles = StyleSheet.create({
-  hero: { paddingTop: 14, paddingBottom: 16, overflow: 'hidden' },
-  inner: { paddingHorizontal: 16, gap: 14 },
+  hero: { paddingTop: 14, paddingBottom: 16, overflow: CLIP },
+  heroCompact: { paddingTop: 2, paddingBottom: 0 },
+  inner: { paddingHorizontal: 16, gap: 8 },
   innerWide: { flexDirection: 'row', alignItems: 'center', gap: 28, paddingHorizontal: 24, paddingVertical: 22 },
   copyWide: { flex: 1.15 },
   aside: { marginHorizontal: -12 },
   asideWide: { flex: 1 },
   wave: { position: 'absolute', left: 0, right: 0, top: 30 },
-  aurora: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  aurora: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, overflow: CLIP },
   eyebrow: { color: C.accent, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 },
   words: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, marginBottom: 8 },
   title: { color: C.text, fontSize: 36, lineHeight: 44, fontWeight: '700', letterSpacing: -1.2 },

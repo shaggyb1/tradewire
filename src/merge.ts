@@ -4,6 +4,9 @@ import type { NewsItem } from './feed';
 const UNKNOWN_AGE_MS = 12 * 3600 * 1000;
 
 const MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+const MAX_PER_SOURCE = 500;
+/** Keeps the saved list well under Android's 2 MB limit for one stored value (1.3 MB at most) */
+export const MAX_ITEMS = 1200;
 
 /** Merges a fresh fetch into the existing list; returns ids not seen before. */
 export function merge(prev: NewsItem[], fresh: NewsItem[], now: number) {
@@ -24,9 +27,16 @@ export function merge(prev: NewsItem[], fresh: NewsItem[], now: number) {
       added.push(f.id);
     }
   }
+  // Limit each source separately, so a busy feed can't push out another source's older news
+  const perSource = new Map<string, number>();
   const items = [...byId.values()]
     .filter((i) => now - i.time < MAX_AGE_MS)
     .sort((a, b) => b.time - a.time)
-    .slice(0, 600);
+    .filter((i) => {
+      const n = (perSource.get(i.sourceId) ?? 0) + 1;
+      perSource.set(i.sourceId, n);
+      return n <= MAX_PER_SOURCE;
+    })
+    .slice(0, MAX_ITEMS);
   return { items, added };
 }

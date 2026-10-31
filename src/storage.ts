@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NewsItem } from './feed';
 import { analyze } from './impact';
+import { MAX_ITEMS } from './merge';
 import { DEFAULT_ENABLED, SOURCE_BY_ID, SOURCES, withNewSources } from './sources';
 
 // Everything is stored only on this phone. Nothing is ever uploaded.
@@ -72,7 +73,7 @@ export async function loadItems(): Promise<NewsItem[]> {
 }
 
 export async function saveItems(items: NewsItem[]): Promise<void> {
-  await AsyncStorage.setItem(ITEMS_KEY, JSON.stringify(items.slice(0, 400)));
+  await AsyncStorage.setItem(ITEMS_KEY, JSON.stringify(items.slice(0, MAX_ITEMS)));
 }
 
 export async function clearAll(): Promise<void> {

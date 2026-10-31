@@ -57,5 +57,5 @@ export function analyze(text: string, kind: Kind, region: Region, minor = false)
   if (minor) {
     return { level: level > 0 ? 1 : 0, tags: tags.slice(0, 4), sectors: [], tone: { dir: 0, mixed: false, strength: 0, reasons: [], sectors: {} } };
   }
-  return { level, tags: tags.slice(0, 4), sectors: [...sectors].slice(0, 5), tone: analyzeTone(text, region === 'India') };
+  return { level, tags: tags.slice(0, 4), sectors: [...sectors].slice(0, 5), tone: analyzeTone(text, region === 'India', kind === 'Exchange') };
 }

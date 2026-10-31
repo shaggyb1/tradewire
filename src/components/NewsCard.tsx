@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import type { NewsItem } from '../feed';
+import { linkLabel, type NewsItem } from '../feed';
 import { SOURCE_BY_ID } from '../sources';
 import { C, LEVEL_COLOR, LEVEL_LABEL } from '../theme';
 import { riseStyle, useEntrance } from '../motion';
@@ -20,6 +20,7 @@ interface Props {
 
 function NewsCard({ item, now, isNew, watched, onOpen, onShare, delay = 0 }: Props) {
   const src = SOURCE_BY_ID[item.sourceId];
+  const opens = linkLabel(item.link);
   const { level, tags, sectors, tone } = item.impact;
   const showTone = tone.dir !== 0 || tone.mixed;
   const toneColor = tone.dir > 0 ? C.bull : tone.dir < 0 ? C.bear : C.muted;
@@ -43,6 +44,7 @@ function NewsCard({ item, now, isNew, watched, onOpen, onShare, delay = 0 }: Pro
           <Text style={[styles.badge, !src.official && styles.badgeMedia]}>{src.short}</Text>
           {!src.official && <Text style={styles.mediaTag}>MEDIA</Text>}
           {!!watched && <Text style={styles.watchTag}>★ {watched}</Text>}
+          {!!opens && <Text style={styles.mediaTag}>{opens}</Text>}
           {isNew && <Text style={styles.newTag}>NEW</Text>}
           {level > 0 && (
             <Text style={[styles.level, { color: LEVEL_COLOR[level] }]}>● {LEVEL_LABEL[level]}</Text>

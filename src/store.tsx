@@ -5,7 +5,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Alert, AppState, Platform } from 'react-native';
 import { disableAlerts, enableAlerts } from './alerts';
-import { fetchSource, type NewsItem } from './feed';
+import { fetchSource, readableLink, type NewsItem } from './feed';
 import { authenticate, canLock } from './lock';
 import { merge } from './merge';
 import { SOURCES } from './sources';
@@ -20,7 +20,7 @@ const MIN_INTERVAL_SEC = Platform.OS === 'web' ? 120 : 0;
 
 export function openLink(url: unknown) {
   if (typeof url !== 'string' || !/^https:\/\//i.test(url)) return;
-  WebBrowser.openBrowserAsync(url, { toolbarColor: C.bg, controlsColor: C.accent }).catch(() => {});
+  WebBrowser.openBrowserAsync(readableLink(url), { toolbarColor: C.bg, controlsColor: C.accent }).catch(() => {});
 }
 
 interface Store {

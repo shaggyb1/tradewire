@@ -10,5 +10,5 @@ export function useLayout() {
   const wide = Platform.OS === 'web' && width >= 960;
   const contentWidth = wide ? width - SIDEBAR_WIDTH - SCROLLBAR : width;
   const columns = !wide ? 1 : contentWidth >= 1500 ? 3 : 2;
-  return { width, wide, contentWidth, columns };
+  return { width, wide, compact: width < 600, contentWidth, columns };
 }

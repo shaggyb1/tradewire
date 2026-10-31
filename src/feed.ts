@@ -108,6 +108,26 @@ export function cleanLink(link: string): string {
     .replace(/[?&]+(#|$)/, '$1');
 }
 
+const fileType = (link: string) => /\.([a-z0-9]{2,5})(?:[?#].*)?$/i.exec(link)?.[1]?.toLowerCase() ?? '';
+
+/**
+ * NSE links many filings as raw machine files: XML shows only code and ZIP only downloads.
+ * Sends those to NSE's readable list of the same filings instead.
+ */
+export function readableLink(link: string): string {
+  if (!/^https:\/\/nsearchives\.nseindia\.com\//i.test(link) || !['xml', 'zip'].includes(fileType(link))) return link;
+  if (/\/content\/circulars\//i.test(link)) return 'https://www.nseindia.com/resources/exchange-communication-circulars';
+  if (/\/corporate\/(FP|CP)_/i.test(link)) return 'https://www.nseindia.com/companies-listing/corporate-filings-offer-documents';
+  return 'https://www.nseindia.com/companies-listing/corporate-filings-announcements';
+}
+
+/** What a tap will open, when it isn't a normal page: "PDF", "NSE list" */
+export function linkLabel(link: string): string | null {
+  if (readableLink(link) !== link) return 'NSE list';
+  const type = fileType(link);
+  return ['pdf', 'xls', 'xlsx', 'doc', 'docx', 'zip'].includes(type) ? type.toUpperCase() : null;
+}
+
 function hash(s: string): string {
   let h = 5381;
   for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;

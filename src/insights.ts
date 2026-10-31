@@ -68,6 +68,9 @@ export function trendWord(days: DayMood[]): { word: string; dir: -1 | 0 | 1 } {
     const down = ds.reduce((a, d) => a + d.down, 0);
     return up + down ? (up - down) / (up + down) : 0;
   };
+  // A comparison needs news on both sides; an empty side is unknown, not neutral
+  const hasNews = (ds: DayMood[]) => ds.some((d) => d.up + d.down > 0);
+  if (!hasNews(days.slice(-3)) || !hasNews(days.slice(0, -3))) return { word: 'Too little news', dir: 0 };
   const recent = net(days.slice(-3));
   const before = net(days.slice(0, -3));
   const diff = recent - before;

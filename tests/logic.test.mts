@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { dayLabel, isTradingDay, meetingDate, upcomingEvents } from '../src/calendar';
-import { cleanLink, parseDate, parseFeed } from '../src/feed';
+import { cleanLink, linkLabel, parseDate, parseFeed, readableLink } from '../src/feed';
 import { analyze } from '../src/impact';
 import { ema, intraday, rsi, supertrend, toCandles } from '../src/indicators';
 import { dayRisk, moodTrend, riskOutlook, sectorHeat, trendWord, watchTrends } from '../src/insights';
@@ -81,7 +81,51 @@ test('merge reports only new items, removes old ones, caps the list', () => {
   assert.equal(merge(first.items, [mk(1)], now).added.length, 0);
   assert.equal(merge([], [mk(2, 8 * 86400000)], now).items.length, 0);
   const many = Array.from({ length: 700 }, (_, i) => mk(i + 10));
-  assert.equal(merge([], many, now).items.length, 600);
+  assert.equal(merge([], many, now).items.length, 500);
+});
+
+test('merge: a busy source cannot push out another source or the older news', () => {
+  const now = Date.UTC(2026, 9, 10);
+  const mk = (id: string, n: number, age: number) => parseFeed(`<rss><channel><item><title>T${n}</title><link>https://a.in/${id}/${n}</link><pubDate>${new Date(now - age).toUTCString()}</pubDate></item></channel></rss>`, SOURCE_BY_ID[id], now)[0];
+  const old = mk('rbi-pr', 1, 5 * 86400000);
+  const flood = Array.from({ length: 1500 }, (_, i) => mk('nse-ann', i, 3600000));
+  const { items } = merge([old], flood, now);
+  assert.ok(items.some((i) => i.id === old.id));
+  assert.equal(items.filter((i) => i.sourceId === 'nse-ann').length, 500);
+});
+
+test('links: raw NSE files open a readable page; a real PDF stays and is labelled', () => {
+  const list = 'https://www.nseindia.com/companies-listing/corporate-filings-announcements';
+  const xml = 'https://nsearchives.nseindia.com/corporate/xbrl/REG30_Restructuring_14258_WebXMLFile_20261031_163312899.xml';
+  assert.equal(readableLink(xml), list);
+  assert.equal(linkLabel(xml), 'NSE list');
+  assert.equal(readableLink('https://nsearchives.nseindia.com/corporate/ELGNZ_ROID_102782_KMP_Doc.zip'), list);
+  assert.equal(readableLink('https://nsearchives.nseindia.com/content/circulars/CMPL77214.zip'), 'https://www.nseindia.com/resources/exchange-communication-circulars');
+  const pdf = 'https://nsearchives.nseindia.com/corporate/EPWINDIA_31102026163256_MOU.pdf';
+  assert.equal(readableLink(pdf), pdf);
+  assert.equal(linkLabel(pdf), 'PDF');
+  const page = 'https://www.federalreserve.gov/newsevents/pressreleases/a.htm';
+  assert.equal(readableLink(page), page);
+  assert.equal(linkLabel(page), null);
+  assert.equal(readableLink('https://evil.example/nsearchives.nseindia.com/x.xml'), 'https://evil.example/nsearchives.nseindia.com/x.xml');
+});
+
+test('tone: one company filing moves that stock, not a whole sector', () => {
+  const filing = analyze('AGS Transact Technologies Limited has informed the Exchange about insolvency proceedings', 'Exchange', 'India').tone;
+  assert.equal(filing.dir, -1);
+  assert.deepEqual(filing.sectors, {});
+  assert.deepEqual(filing.reasons, ['Credit stress → stock −']);
+  const regulator = analyze('RBI imposes moratorium on the bank', 'Regulator', 'India').tone;
+  assert.equal(regulator.sectors.Banks, -1);
+  assert.equal(analyze('Filing mentions war risk and rate cut', 'Exchange', 'India').tone.dir, 0);
+});
+
+test('mood trend: no earlier news means too little news, not improving', () => {
+  const day = (up: number, down = 0) => ({ date: '2026-10-10', up, down });
+  const none = [day(0), day(0), day(0), day(0)];
+  assert.equal(trendWord([...none, day(0), day(8), day(2, 1)]).word, 'Too little news');
+  assert.equal(trendWord([day(4), ...none.slice(1), day(0), day(0), day(0)]).word, 'Too little news');
+  assert.equal(trendWord([day(1, 3), ...none.slice(1), day(0), day(8), day(2, 1)]).word, 'Improving');
 });
 
 test('tone: direction, negation and India-only company rules', () => {
