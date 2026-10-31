@@ -79,12 +79,16 @@ export default function NewsScreen() {
   const dayStats = useMemo(() => {
     let headlines = 0;
     let high = 0;
+    let up = 0;
+    let down = 0;
     for (const i of items) {
       if (!settings.enabled.includes(i.sourceId) || now - i.time > MOOD_WINDOW_MS) continue;
       headlines++;
       if (i.impact.level >= 3) high++;
+      if (i.impact.tone.dir > 0) up++;
+      else if (i.impact.tone.dir < 0) down++;
     }
-    return { headlines, high };
+    return { headlines, high, up, down };
   }, [items, settings.enabled, now]);
 
   const newCount = useMemo(() => visible.filter((i) => newIds.has(i.id)).length, [visible, newIds]);
@@ -165,7 +169,7 @@ export default function NewsScreen() {
                     {failed > 0 && <Text style={{ color: C.high }}>{` · ${failed} failed`}</Text>}
                   </Text>
                 </Hero>
-                <StatBand live={enabledSources.length - failed} headlines={dayStats.headlines} high={dayStats.high} up={mood.up} down={mood.down} />
+                <StatBand live={enabledSources.length - failed} headlines={dayStats.headlines} high={dayStats.high} up={dayStats.up} down={dayStats.down} />
           
                 <TextInput
                   value={query}

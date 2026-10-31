@@ -6,6 +6,7 @@ const GLOBAL_CSS = `
 @font-face { font-family: 'Inter Tight'; src: url('/fonts/InterTight.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
 * { font-family: 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif !important; }
 body { background-color: #EEF3F5; }
+input:focus { outline: 2px solid #3A7089 !important; outline-offset: 1px; }
 `;
 
 export default function Root({ children }: PropsWithChildren) {
