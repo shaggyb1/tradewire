@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Animated, FlatList, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, TextInput, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { Animated, FlatList, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, TextInput, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Hero, { PulseDot } from '../components/Hero';
 import { Logo } from '../components/Icons';
@@ -7,11 +7,13 @@ import LiveWire from '../components/LiveWire';
 import MoodBar from '../components/MoodBar';
 import NewsCard from '../components/NewsCard';
 import RiskStrip from '../components/RiskStrip';
+import StatBand from '../components/StatBand';
 import TickerTape from '../components/TickerTape';
 import type { NewsItem } from '../feed';
+import { useLayout } from '../layout';
 import { SOURCE_BY_ID, SOURCES } from '../sources';
 import { openLink, useStore } from '../store';
-import { C, MAX_WIDTH } from '../theme';
+import { C } from '../theme';
 import { istClock, nseState } from '../time';
 
 type Tab = 'All' | 'India' | 'Global' | 'High' | 'Watch';
@@ -32,7 +34,7 @@ export default function NewsScreen() {
   const [query, setQuery] = useState('');
   const [toneFilter, setToneFilter] = useState<1 | -1 | null>(null);
   const listRef = useRef<FlatList<NewsItem>>(null);
-  const wide = useWindowDimensions().width >= 700;
+  const { columns } = useLayout();
   const [progress] = useState(() => new Animated.Value(0));
   const onScroll = useCallback(
     ({ nativeEvent: e }: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -74,6 +76,17 @@ export default function NewsScreen() {
     [filtered, toneFilter],
   );
 
+  const dayStats = useMemo(() => {
+    let headlines = 0;
+    let high = 0;
+    for (const i of items) {
+      if (!settings.enabled.includes(i.sourceId) || now - i.time > MOOD_WINDOW_MS) continue;
+      headlines++;
+      if (i.impact.level >= 3) high++;
+    }
+    return { headlines, high };
+  }, [items, settings.enabled, now]);
+
   const newCount = useMemo(() => visible.filter((i) => newIds.has(i.id)).length, [visible, newIds]);
 
   const onOpen = useCallback((item: NewsItem) => openLink(item.link), []);
@@ -97,15 +110,21 @@ export default function NewsScreen() {
         scrollEventThrottle={16}
         data={visible}
         keyExtractor={(i) => i.id}
-        renderItem={({ item }) => (
-          <NewsCard
-            item={item}
-            now={now}
-            isNew={newIds.has(item.id)}
-            watched={watchMap.get(item.id) ?? null}
-            onOpen={onOpen}
-            onShare={onShare}
-          />
+        // Changing the column count requires a fresh list
+        key={columns}
+        numColumns={columns}
+        renderItem={({ item, index }) => (
+          <View style={columns > 1 ? { flex: 1, maxWidth: `${100 / columns}%` } : undefined}>
+            <NewsCard
+              item={item}
+              now={now}
+              isNew={newIds.has(item.id)}
+              watched={watchMap.get(item.id) ?? null}
+              delay={(index % columns) * 70}
+              onOpen={onOpen}
+              onShare={onShare}
+            />
+          </View>
         )}
         contentContainerStyle={styles.listContent}
         refreshControl={
@@ -137,7 +156,7 @@ export default function NewsScreen() {
                   </Text>
                 </View>
           
-                <Hero wide={wide}>
+                <Hero aside={<LiveWire items={items} now={now} enabled={settings.enabled} />}>
                   <PulseDot color={loading ? C.med : C.open} />
                   <Text style={styles.updated}>
                     {loading ? 'Updating…' : lastUpdated ? `Updated ${istClock(lastUpdated, true)} IST` : 'Connecting…'}
@@ -146,7 +165,7 @@ export default function NewsScreen() {
                     {failed > 0 && <Text style={{ color: C.high }}>{` · ${failed} failed`}</Text>}
                   </Text>
                 </Hero>
-                <LiveWire items={items} now={now} enabled={settings.enabled} />
+                <StatBand live={enabledSources.length - failed} headlines={dayStats.headlines} high={dayStats.high} up={mood.up} down={mood.down} />
           
                 <TextInput
                   value={query}
@@ -220,8 +239,8 @@ export default function NewsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Platform.OS === 'web' ? 'transparent' : C.bg },
-  listContent: { paddingTop: 4, paddingBottom: 32, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  root: { flex: 1 },
+  listContent: { paddingTop: 4, paddingBottom: 32 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   logo: { color: C.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },

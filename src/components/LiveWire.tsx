@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   light: { width: 8, height: 8, borderRadius: 4 },
   path: { color: C.muted, fontSize: 11 },
   count: { color: C.faint, fontSize: 11, width: 50, textAlign: 'right', fontVariant: ['tabular-nums'] },
-  body: { padding: 12, gap: 6 },
+  body: { padding: 14, gap: 6 },
   prompt: { color: C.accent, fontSize: 12, fontWeight: '600' },
   line: { color: C.text, fontSize: 15, fontWeight: '600', lineHeight: 21, height: 63 },
   result: { fontSize: 12, fontWeight: '700' },

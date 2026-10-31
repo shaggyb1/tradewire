@@ -3,8 +3,11 @@ import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextI
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SOURCES, type Source } from '../sources';
 import type { Settings } from '../storage';
+import { Aurora } from '../components/Hero';
+import Reveal from '../components/Reveal';
+import { useLayout } from '../layout';
 import { useStore } from '../store';
-import { C, MAX_WIDTH } from '../theme';
+import { C } from '../theme';
 import { normalizeTerm } from '../watchlist';
 
 const IS_WEB = Platform.OS === 'web';
@@ -24,6 +27,7 @@ const GROUPS: { title: string; filter: (s: Source) => boolean }[] = [
 
 export default function SettingsScreen() {
   const { settings, errors, updateSettings: onChange, clearData: onClearData } = useStore();
+  const { wide } = useLayout();
   const toggle = (id: string, on: boolean) =>
     onChange({ ...settings, enabled: on ? [...settings.enabled, id] : settings.enabled.filter((x) => x !== id) });
 
@@ -49,9 +53,11 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
-          <Text style={styles.h1}>Settings</Text>
+          <Aurora />
+          <Text style={[styles.h1, wide && styles.h1Wide]}>Settings</Text>
         </View>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Reveal distance={18}>
           <Text style={styles.h2}>★ Watchlist</Text>
           <Text style={styles.p}>
             Stocks or topics you trade. Matching news is starred, gets its own tab, and their results dates show in the
@@ -202,16 +208,18 @@ export default function SettingsScreen() {
             They are not investment advice or buy/sell signals. Always read the original source and do your own
             research, or consult a SEBI-registered adviser, before trading.
           </Text>
+          </Reveal>
         </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Platform.OS === 'web' ? 'transparent' : C.bg },
-  header: { padding: 16, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  root: { flex: 1 },
+  h1Wide: { fontSize: 52, letterSpacing: -1.8 },
+  header: { padding: 16, overflow: 'hidden' },
   h1: { color: C.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.8 },
-  content: { paddingHorizontal: 16, paddingBottom: 48, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  content: { paddingHorizontal: 16, paddingBottom: 48 },
   h2: { color: C.accent, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginTop: 24, marginBottom: 8 },
   row: { flexDirection: 'row', gap: 8 },
   chip: { backgroundColor: C.chip, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16 },

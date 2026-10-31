@@ -1,9 +1,12 @@
 import { useMemo } from 'react';
-import { Platform, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { dayLabel, HOLIDAYS_KNOWN_UNTIL, upcomingEvents, type CalEvent, type EventKind } from '../calendar';
+import { Aurora } from '../components/Hero';
+import Reveal from '../components/Reveal';
+import { useLayout } from '../layout';
 import { openLink, useStore } from '../store';
-import { C, MAX_WIDTH } from '../theme';
+import { C } from '../theme';
 
 const KIND_STYLE: Record<EventKind, { icon: string; color: string }> = {
   RBI: { icon: '🏦', color: C.high },
@@ -17,6 +20,7 @@ const KIND_STYLE: Record<EventKind, { icon: string; color: string }> = {
 
 export default function CalendarScreen() {
   const { now, items, settings } = useStore();
+  const { wide } = useLayout();
   const watchlist = settings.watchlist;
   const onOpenLink = openLink;
   const sections = useMemo(() => {
@@ -32,7 +36,8 @@ export default function CalendarScreen() {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
-          <Text style={styles.h1}>Market calendar</Text>
+          <Aurora />
+          <Text style={[styles.h1, wide && styles.h1Wide]}>Market calendar</Text>
         </View>
         <SectionList
           sections={sections}
@@ -40,9 +45,10 @@ export default function CalendarScreen() {
           stickySectionHeadersEnabled
           contentContainerStyle={styles.content}
           renderSectionHeader={({ section }) => <Text style={styles.day}>{section.title}</Text>}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const k = KIND_STYLE[item.kind];
             return (
+              <Reveal delay={Math.min(index, 4) * 70} distance={10}>
               <Pressable
                 disabled={!item.link}
                 onPress={() => item.link && onOpenLink(item.link)}
@@ -54,6 +60,7 @@ export default function CalendarScreen() {
                   {!!item.note && <Text style={styles.note}>{item.note}</Text>}
                 </View>
               </Pressable>
+              </Reveal>
             );
           }}
           ListFooterComponent={
@@ -72,10 +79,11 @@ export default function CalendarScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Platform.OS === 'web' ? 'transparent' : C.bg },
-  header: { padding: 16, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  root: { flex: 1 },
+  h1Wide: { fontSize: 52, letterSpacing: -1.8 },
+  header: { padding: 16, overflow: 'hidden' },
   h1: { color: C.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.8 },
-  content: { paddingHorizontal: 12, paddingBottom: 48, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  content: { paddingHorizontal: 12, paddingBottom: 48 },
   day: { color: C.accent, backgroundColor: C.bg, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', paddingTop: 16, paddingBottom: 6, paddingHorizontal: 4 },
   event: {
     flexDirection: 'row',

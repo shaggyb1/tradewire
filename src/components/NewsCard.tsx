@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NewsItem } from '../feed';
 import { SOURCE_BY_ID } from '../sources';
@@ -14,22 +14,27 @@ interface Props {
   watched: string | null;
   onOpen: (item: NewsItem) => void;
   onShare: (item: NewsItem) => void;
+  /** Entrance delay, so a row of cards ripples in */
+  delay?: number;
 }
 
-function NewsCard({ item, now, isNew, watched, onOpen, onShare }: Props) {
+function NewsCard({ item, now, isNew, watched, onOpen, onShare, delay = 0 }: Props) {
   const src = SOURCE_BY_ID[item.sourceId];
   const { level, tags, sectors, tone } = item.impact;
   const showTone = tone.dir !== 0 || tone.mixed;
   const toneColor = tone.dir > 0 ? C.bull : tone.dir < 0 ? C.bear : C.muted;
   const toneLabel =
     tone.dir > 0 ? `▲ ${tone.strength === 2 ? 'Strongly ' : ''}Bullish` : tone.dir < 0 ? `▼ ${tone.strength === 2 ? 'Strongly ' : ''}Bearish` : '◆ Mixed signals';
-  const enter = useEntrance(0, 320);
+  const enter = useEntrance(delay, 420);
+  const [hovered, setHovered] = useState(false);
   return (
-    <Animated.View style={riseStyle(enter, 10)}>
+    <Animated.View style={riseStyle(enter, 18)}>
     <Pressable
       onPress={() => onOpen(item)}
       onLongPress={() => onShare(item)}
-      style={({ pressed }) => [styles.card, !!watched && styles.cardWatched, pressed && styles.pressed]}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      style={({ pressed }) => [styles.card, !!watched && styles.cardWatched, hovered && styles.hovered, pressed && styles.pressed]}
       accessibilityRole="link"
     >
       <View style={[styles.bar, { backgroundColor: LEVEL_COLOR[level] }]} />
@@ -97,9 +102,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
     marginHorizontal: 12,
-    marginBottom: 8,
+    marginBottom: 10,
+    flexGrow: 1,
     overflow: 'hidden',
   },
+  hovered: { borderColor: C.accent, transform: [{ translateY: -3 }] },
   pressed: { opacity: 0.85, transform: [{ scale: 0.985 }] },
   cardWatched: { borderColor: C.accent, borderWidth: 1 },
   watchTag: { color: C.accent, fontSize: 11, fontWeight: '800', flexShrink: 1 },

@@ -1,13 +1,16 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bar, IntradayChart } from '../components/Charts';
+import { Aurora } from '../components/Hero';
+import Reveal from '../components/Reveal';
 import { intraday } from '../indicators';
 import { getAllIndices, getChain, getExpiries, getFnoStocks, getIndexTicks, getStockTicks, OPTION_SYMBOLS, type Chain, type FnoStock, type IndexQuote, type Tick } from '../nse';
+import { useLayout } from '../layout';
 import { chainStats, nearAtm, pcrReading } from '../optionStats';
 import { useStore } from '../store';
-import { C, MAX_WIDTH } from '../theme';
+import { C } from '../theme';
 import { istClock, nseState } from '../time';
 
 const REFRESH_MS = (Platform.OS === 'web' ? 120 : 60) * 1000;
@@ -18,7 +21,7 @@ const signed = (n: number) => `${n >= 0 ? '+' : '−'}${lakh(Math.abs(n))}`;
 
 export default function OptionsScreen() {
   const { now } = useStore();
-  const { width } = useWindowDimensions();
+  const { wide, contentWidth } = useLayout();
   const [symbol, setSymbol] = useState('NIFTY');
   const [stocks, setStocks] = useState<FnoStock[]>([]);
   const [stockQuery, setStockQuery] = useState('');
@@ -120,7 +123,8 @@ export default function OptionsScreen() {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
-        <Text style={styles.h1}>Options & intraday</Text>
+        <Aurora />
+        <Text style={[styles.h1, wide && styles.h1Wide]}>Options & intraday</Text>
         <Text style={styles.small}>
           {loading ? 'Updating…' : fetchedAt ? `NSE ${market} · fetched ${istClock(fetchedAt)} IST` : 'Loading…'}
         </Text>
@@ -180,6 +184,8 @@ export default function OptionsScreen() {
           </View>
         )}
 
+        <View style={wide ? styles.columns : undefined}>
+        <Reveal key={`left-${symbol}`} style={wide ? styles.column : undefined}>
         {/* Intraday */}
         {tech && ticks && (
           <>
@@ -198,7 +204,7 @@ export default function OptionsScreen() {
                 </Text>
               )}
               <View style={{ marginTop: 10 }}>
-                <IntradayChart ticks={ticks.ticks} prevClose={ticks.prevClose} width={Math.min(width, MAX_WIDTH) - 50} />
+                <IntradayChart key={symbol} ticks={ticks.ticks} prevClose={ticks.prevClose} width={(wide ? (contentWidth - 24 - 14) / 2 : contentWidth - 24) - 26} />
               </View>
             </View>
 
@@ -226,6 +232,8 @@ export default function OptionsScreen() {
           </>
         )}
 
+        </Reveal>
+        <Reveal key={`right-${symbol}`} delay={120} style={wide ? styles.column : undefined}>
         {/* Option chain analysis */}
         {chain && !stats && (
           <View style={styles.card}>
@@ -295,6 +303,9 @@ export default function OptionsScreen() {
           </>
         )}
 
+        </Reveal>
+        </View>
+
         <Text style={styles.footer}>
           Data from the nseindia.com website (not an official API): may be delayed, and may stop working if NSE changes its
           site. Sensex (BSE) and crude oil (MCX) aren’t included because those exchanges block this kind of access. Indicators describe what price and open interest are doing; they are not buy or sell signals or investment
@@ -316,11 +327,14 @@ function Stat({ label, value, note }: { label: string; value: string; note: stri
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Platform.OS === 'web' ? 'transparent' : C.bg },
-  header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  root: { flex: 1 },
+  columns: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
+  column: { flex: 1 },
+  h1Wide: { fontSize: 52, letterSpacing: -1.8 },
+  header: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, overflow: 'hidden' },
   h1: { color: C.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.8 },
   h2: { color: C.accent, fontSize: 12, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', marginTop: 16, marginBottom: 6, marginLeft: 4 },
-  content: { paddingHorizontal: 12, paddingBottom: 32, width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center' },
+  content: { paddingHorizontal: 12, paddingBottom: 32 },
   row: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   chip: { backgroundColor: C.chip, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16 },
   chipSmall: { paddingHorizontal: 10, paddingVertical: 5 },

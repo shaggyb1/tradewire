@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import Svg, { G, Line, Path, Rect } from 'react-native-svg';
 import { inSession } from '../indicators';
 import type { DayMood } from '../insights';
 import type { Tick } from '../nse';
 import { C } from '../theme';
+import { Wipe } from './Reveal';
 
 const IST_MS = 330 * 60000;
 const hm = (t: number) => new Date(t + IST_MS).toISOString().slice(11, 16);
@@ -63,6 +64,7 @@ export function IntradayChart({ ticks, prevClose, width, height = 150 }: LinePro
         onResponderMove={onTouch}
         accessibilityLabel={`Intraday chart. Last ${fmt(last)}, previous close ${fmt(prevClose)}`}
       >
+        <Wipe width={width}>
         <Svg width={width} height={height}>
           {!!prevClose && (
             <Line x1={0} x2={width} y1={y(prevClose)} y2={y(prevClose)} stroke={C.muted} strokeWidth={1} strokeDasharray="4 4" />
@@ -75,6 +77,7 @@ export function IntradayChart({ ticks, prevClose, width, height = 150 }: LinePro
             </>
           )}
         </Svg>
+        </Wipe>
       </View>
       <View style={styles.axisRow}>
         <Text style={styles.axis}>{hm(t0)}</Text>
@@ -110,6 +113,7 @@ export function MoodTrendChart({ days, width, height = 120 }: MoodProps) {
       <Text style={styles.readout}>
         {s ? `${DAY[new Date(s.date + 'T00:00:00Z').getUTCDay()]} ${s.date.slice(8)}/${s.date.slice(5, 7)}: ▲ ${s.up} bullish · ▼ ${s.down} bearish` : 'Tap a day to see its counts'}
       </Text>
+      <Wipe width={width} duration={800}>
       <Svg width={width} height={height}>
         <Line x1={0} x2={width} y1={half} y2={half} stroke={C.grid} strokeWidth={1} />
         {days.map((d, i) => {
@@ -125,6 +129,7 @@ export function MoodTrendChart({ days, width, height = 120 }: MoodProps) {
           );
         })}
       </Svg>
+      </Wipe>
       <View style={[styles.hitRow, { height }]}>
         {days.map((d, i) => (
           <Pressable key={d.date} style={styles.hit} onPress={() => setSel(sel === i ? null : i)} accessibilityLabel={`${d.date}: ${d.up} bullish, ${d.down} bearish`} />
@@ -152,9 +157,14 @@ export function MoodTrendChart({ days, width, height = 120 }: MoodProps) {
 /** A thin bar whose length is value/max of the available width. `align` = which side it grows from. */
 export function Bar({ value, max, color, align = 'left' }: { value: number; max: number; color: string; align?: 'left' | 'right' }) {
   const pct = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
+  const target = pct > 0 ? Math.max(pct, 0.03) : 0;
+  const [v] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    Animated.timing(v, { toValue: target, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+  }, [v, target]);
   return (
     <View style={[styles.barTrack, { alignItems: align === 'left' ? 'flex-start' : 'flex-end' }]}>
-      {pct > 0 && <View style={[styles.barFill, { width: `${Math.max(pct * 100, 3)}%`, backgroundColor: color }]} />}
+      <Animated.View style={[styles.barFill, { width: v.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }), backgroundColor: color }]} />
     </View>
   );
 }

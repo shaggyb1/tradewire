@@ -1,5 +1,5 @@
 import type { ColorValue } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 interface Props {
   color: ColorValue;
@@ -55,13 +55,20 @@ export function SettingsIcon({ color, size = 22 }: Props) {
   );
 }
 
-/** TradeWire's mark: a signal rising through a wire. */
-export function Logo({ size = 30 }: { size?: number }) {
+/** TradeWire's mark: a market line rising through a signal pulse. Same design as the app icon. */
+export function Logo({ size = 32 }: { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 32 32">
-      <Rect width={32} height={32} rx={9} fill="#22303A" />
-      <Path d="M6 21h6l4-10 4 10h6" stroke="#F9FBFC" strokeWidth={2.6} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <Circle cx={16} cy={11} r={2.4} fill="#8FC1D8" />
+    <Svg width={size} height={size} viewBox="0 0 1024 1024">
+      <Defs>
+        <LinearGradient id="logoBg" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor="#14323F" />
+          <Stop offset="1" stopColor="#1F7F86" />
+        </LinearGradient>
+      </Defs>
+      <Rect width={1024} height={1024} rx={228} fill="url(#logoBg)" />
+      <Path d="M170 640 H360 L450 410 L585 735 L680 470 L748 560 L845 330" fill="none" stroke="#FFFFFF" strokeWidth={66} strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx={845} cy={330} r={84} fill="#7FE8C9" fillOpacity={0.28} />
+      <Circle cx={845} cy={330} r={50} fill="#7FE8C9" />
     </Svg>
   );
 }

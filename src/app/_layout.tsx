@@ -5,6 +5,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { CalendarIcon, InsightsIcon, NewsIcon, OptionsIcon, SettingsIcon } from '../components/Icons';
 import LockScreen from '../components/LockScreen';
+import { SIDEBAR_WIDTH, useLayout } from '../layout';
 import { StoreProvider, useStore } from '../store';
 import { C } from '../theme';
 
@@ -27,6 +28,7 @@ export default function RootLayout() {
   // On web the first HTML is built ahead of time, when today's time and the screen size aren't known.
   // Waiting for the browser avoids a mismatch that forces React to redo the whole page.
   const inBrowser = useSyncExternalStore(noSubscribe, () => true, () => false);
+  const { wide } = useLayout();
   if (!inBrowser) return <View style={styles.root} />;
 
   return (
@@ -38,10 +40,15 @@ export default function RootLayout() {
             screenOptions={{
               headerShown: false,
               animation: 'fade',
-              tabBarActiveTintColor: C.accent,
+              tabBarActiveTintColor: wide ? C.text : C.accent,
+              tabBarActiveBackgroundColor: wide ? C.chipActive : 'transparent',
               tabBarInactiveTintColor: C.muted,
-              tabBarStyle: { backgroundColor: C.card, borderTopColor: C.cardBorder, ...(Platform.OS === 'web' ? { height: 64, paddingBottom: 8 } : null) },
-              tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+              tabBarPosition: wide ? 'left' : 'bottom',
+              tabBarLabelPosition: wide ? 'beside-icon' : 'below-icon',
+              tabBarStyle: wide
+                ? { backgroundColor: C.card, borderRightColor: C.cardBorder, width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH, paddingTop: 16 }
+                : { backgroundColor: C.card, borderTopColor: C.cardBorder, ...(Platform.OS === 'web' ? { height: 64, paddingBottom: 8 } : null) },
+              tabBarLabelStyle: { fontSize: wide ? 14 : 11, fontWeight: '600' },
               sceneStyle: SCENE,
             }}
           >

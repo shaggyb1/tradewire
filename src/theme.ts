@@ -30,5 +30,3 @@ export const C = {
 export const LEVEL_COLOR = [C.none, C.low, C.med, C.high];
 export const LEVEL_LABEL = ['', 'Low', 'Medium', 'High'];
 
-/** Widest the content gets on desktop */
-export const MAX_WIDTH = 1040;
