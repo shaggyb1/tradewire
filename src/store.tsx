@@ -64,6 +64,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const itemsRef = useRef<NewsItem[]>([]);
   const settingsRef = useRef(settings);
   const busy = useRef(false);
+  const lastFetch = useRef(0);
   const lockedRef = useRef(false);
   const pendingLink = useRef<unknown>(null);
   useEffect(() => {
@@ -74,6 +75,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const fetchAll = useCallback(async (enabled: string[]) => {
     if (busy.current) return;
     busy.current = true;
+    lastFetch.current = Date.now();
     setLoading(true);
     const srcs = SOURCES.filter((s) => enabled.includes(s.id));
     const results = await Promise.allSettled(srcs.map(fetchSource));
@@ -123,7 +125,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const sub = AppState.addEventListener('change', (st) => {
       const wasActive = active;
       active = st === 'active';
-      if (active && !wasActive) refresh();
+      // A browser tab can flip between hidden and visible many times a minute
+      if (active && !wasActive && Date.now() - lastFetch.current >= MIN_INTERVAL_SEC * 1000) refresh();
     });
     return () => {
       clearInterval(tick);
