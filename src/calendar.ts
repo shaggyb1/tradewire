@@ -151,7 +151,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
 /** Finds "on 29-Oct-2026", "on 29/10/2026", "on October 29, 2026" etc. after a board-meeting mention. */
 export function meetingDate(text: string): string | null {
-  const after = text.slice(Math.max(0, text.search(/board meeting/i)));
+  const after = text.slice(Math.max(0, text.search(/board meeting|meeting date/i)));
   let m = /\b(\d{1,2})(?:st|nd|rd|th)?[-\s/.]+([A-Za-z]{3,9}|\d{1,2})[-\s/.,]+(20\d{2})\b/.exec(after);
   if (m) {
     const mon = /^\d+$/.test(m[2]) ? Number(m[2]) : MONTHS[m[2].slice(0, 3).toLowerCase()];
@@ -168,10 +168,22 @@ function resultsEvents(items: NewsItem[], watchlist: string[], from: string): Ca
   const out: CalEvent[] = [];
   for (const i of items) {
     const text = `${i.title} ${i.summary}`;
-    if (!/board meeting/i.test(text) || !/result/i.test(text)) continue;
     const who = matchWatch(text, watchlist);
-    const date = who ? meetingDate(text) : null;
-    if (!who || !date || date < from || seen.has(who + date)) continue;
+    if (!who) continue;
+    // NSE corporate actions: "Concord Biotech Limited - Ex-Date: 04-Nov-2026"
+    const ex = /^(.*?)\s*-\s*Ex-Date:\s*(\d{1,2}-[A-Za-z]{3}-20\d{2})/i.exec(i.title);
+    if (ex) {
+      const date = meetingDate(`board meeting ${ex[2]}`);
+      const purpose = /PURPOSE:\s*([^|]+)/i.exec(i.summary)?.[1]?.trim();
+      if (date && date >= from && !seen.has(`ex${who}${date}`)) {
+        seen.add(`ex${who}${date}`);
+        out.push({ date, title: `${ex[1]} — ex-date`, kind: 'Results', weight: 2, note: `${purpose ? `${purpose} · ` : ''}Watchlist: ${who}`, link: i.link });
+      }
+      continue;
+    }
+    if (!/(board meeting|meeting date)/i.test(text) || !/result/i.test(text)) continue;
+    const date = meetingDate(text);
+    if (!date || date < from || seen.has(who + date)) continue;
     seen.add(who + date);
     out.push({ date, title: `${i.title} — results (board meeting)`, kind: 'Results', weight: 2, note: `Watchlist: ${who}`, link: i.link });
   }

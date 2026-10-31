@@ -9,7 +9,7 @@ import { dayRisk, moodTrend, riskOutlook, sectorHeat, trendWord, watchTrends } f
 import { merge } from '../src/merge';
 import { parseStockTicks, type Chain, type Tick } from '../src/nse';
 import { chainStats, nearAtm, pcrReading } from '../src/optionStats';
-import { SOURCE_BY_ID, SOURCES } from '../src/sources';
+import { DEFAULT_ENABLED, SOURCE_BY_ID, SOURCES, withNewSources } from '../src/sources';
 import { nseState } from '../src/time';
 import { analyzeTone } from '../src/tone';
 import { matchWatch, normalizeTerm } from '../src/watchlist';
@@ -237,6 +237,41 @@ test('insights: trend needs enough news; heat counts sectors', () => {
   assert.equal(heat.find((h) => h.sector === 'Banks')!.indexPct, 2);
   assert.equal(heat.find((h) => h.sector === 'OMCs')!.down, 1);
   assert.equal(watchTrends(items, ['RBI'], now)[0].total, 1);
+});
+
+test('new official sources switch on once; a source the user turned off stays off', () => {
+  const upgraded = withNewSources(['rbi-pr'], undefined);
+  assert.ok(upgraded.includes('nse-board'), 'new official source added for existing users');
+  assert.ok(!upgraded.includes('sebi'), 'original source the user switched off stays off');
+  assert.ok(!upgraded.includes('cnbc'), 'new media source stays off');
+  const all = SOURCES.map((s) => s.id);
+  assert.deepEqual(withNewSources(['rbi-pr'], all), ['rbi-pr'], 'nothing changes once sources are known');
+  assert.ok(DEFAULT_ENABLED.includes('bis'));
+  assert.ok(!DEFAULT_ENABLED.includes('cnbc'));
+});
+
+test('minor sources are shown but never move a signal', () => {
+  const rss = '<rss><channel><item><title>Bank of Canada raises the policy rate by 25 basis points</title><link>https://a.in/1</link><pubDate>30 Oct 2026 10:00:00 GMT</pubDate></item></channel></rss>';
+  const [i] = parseFeed(rss, SOURCE_BY_ID.boc, Date.UTC(2026, 9, 31));
+  assert.equal(i.impact.tone.dir, 0);
+  assert.deepEqual(i.impact.tone.sectors, {});
+  assert.deepEqual(i.impact.sectors, []);
+  assert.equal(i.impact.level, 1);
+  assert.ok(i.impact.tags.includes('Rates'));
+  const [fed] = parseFeed(rss.replace('Bank of Canada', 'Fed'), SOURCE_BY_ID.fed, Date.UTC(2026, 9, 31));
+  assert.equal(fed.impact.tone.dir, -1, 'major central banks still count');
+});
+
+test('calendar picks up results and ex-dates for watchlist stocks from NSE feeds', () => {
+  const now = ist('2026-10-31T09:00:00');
+  const board = parseFeed('<rss><channel><item><title>Shree Vasu Logistics Limited</title><link>https://a.in/b</link><description>Financial Results |Meeting Date: 04-Nov-2026</description><pubDate>31-Oct-2026 08:19:57</pubDate></item><item><title>Other Limited</title><link>https://a.in/o</link><description>Financial Results |Meeting Date: 05-Nov-2026</description><pubDate>31-Oct-2026 08:19:57</pubDate></item></channel></rss>', SOURCE_BY_ID['nse-board'], now);
+  const ca = parseFeed('<rss><channel><item><title>Concord Biotech Limited - Ex-Date: 04-Nov-2026 </title><link>https://a.in/c</link><description>SERIES:EQ |PURPOSE:BONUS 1:1 |FACE VALUE:1</description><pubDate>31-Oct-2026 08:00:00</pubDate></item></channel></rss>', SOURCE_BY_ID['nse-ca'], now);
+  const results = upcomingEvents(now, [...board, ...ca], ['Shree Vasu', 'Concord Biotech'], 30).filter((e) => e.kind === 'Results');
+  assert.equal(results.length, 2);
+  assert.ok(results.every((e) => e.date === '2026-11-04'));
+  assert.ok(results.some((e) => /results/.test(e.title)));
+  const exDate = results.find((e) => /ex-date/.test(e.title))!;
+  assert.match(exDate.note!, /BONUS 1:1/);
 });
 
 test('sources: https only, unique ids, official on by default', () => {

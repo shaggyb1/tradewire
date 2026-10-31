@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NewsItem } from './feed';
 import { analyze } from './impact';
-import { DEFAULT_ENABLED, SOURCE_BY_ID } from './sources';
+import { DEFAULT_ENABLED, SOURCE_BY_ID, SOURCES, withNewSources } from './sources';
 
 // Everything is stored only on this phone. Nothing is ever uploaded.
 const ITEMS_KEY = 'tw.items.v1';
@@ -21,6 +21,8 @@ export interface Settings {
   lockEnabled: boolean;
   /** Block screenshots and blank the app in the recent-apps view */
   hideScreen: boolean;
+  /** Sources this user has already been offered, so new ones can be turned on once */
+  knownSources?: string[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -32,6 +34,7 @@ export const DEFAULT_SETTINGS: Settings = {
   watchOnlyAlerts: false,
   lockEnabled: false,
   hideScreen: true,
+  knownSources: SOURCES.map((s) => s.id),
 };
 
 export async function loadSettings(): Promise<Settings> {
@@ -39,7 +42,9 @@ export async function loadSettings(): Promise<Settings> {
     const raw = await AsyncStorage.getItem(SETTINGS_KEY);
     if (!raw) return DEFAULT_SETTINGS;
     const s = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } as Settings;
-    s.enabled = s.enabled.filter((id) => SOURCE_BY_ID[id]);
+    const saved = JSON.parse(raw) as Partial<Settings>;
+    s.enabled = withNewSources(s.enabled.filter((id) => SOURCE_BY_ID[id]), saved.knownSources);
+    s.knownSources = SOURCES.map((x) => x.id);
     return s;
   } catch {
     return DEFAULT_SETTINGS;
@@ -59,7 +64,7 @@ export async function loadItems(): Promise<NewsItem[]> {
       .filter((i) => SOURCE_BY_ID[i.sourceId] && i.timeKind)
       .map((i) => {
         const src = SOURCE_BY_ID[i.sourceId];
-        return { ...i, impact: analyze(i.summary ? `${i.title} ${i.summary}` : i.title, src.kind, src.region) };
+        return { ...i, impact: analyze(i.summary ? `${i.title} ${i.summary}` : i.title, src.kind, src.region, src.minor) };
       });
   } catch {
     return [];

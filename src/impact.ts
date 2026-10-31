@@ -42,7 +42,7 @@ const RULES: Rule[] = [
   { tag: 'Mgmt change', level: 1, re: /\b(resignation|appointment of (CEO|MD|CFO)|cessation)\b/i, onlyKinds: ['Exchange'] },
 ];
 
-export function analyze(text: string, kind: Kind, region: Region): Impact {
+export function analyze(text: string, kind: Kind, region: Region, minor = false): Impact {
   let level: Level = 0;
   const tags: string[] = [];
   const sectors = new Set<string>();
@@ -52,6 +52,10 @@ export function analyze(text: string, kind: Kind, region: Region): Impact {
     tags.push(r.tag);
     if (r.level > level) level = r.level;
     r.sectors?.forEach((s) => sectors.add(s));
+  }
+  // Far from Indian markets: keep the topic tags, but don't let it move any signal
+  if (minor) {
+    return { level: level > 0 ? 1 : 0, tags: tags.slice(0, 4), sectors: [], tone: { dir: 0, mixed: false, strength: 0, reasons: [], sectors: {} } };
   }
   return { level, tags: tags.slice(0, 4), sectors: [...sectors].slice(0, 5), tone: analyzeTone(text, region === 'India') };
 }

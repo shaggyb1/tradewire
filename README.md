@@ -10,7 +10,7 @@ All tags and indicators are keyword-based triage from headline wording. They are
 
 | Version | What's new |
 |---|---|
-| 1.6.0 | Full-page website with side navigation and multi-column news, richer animation on every page, new app icon and logo |
+| 1.6.0 | 13 more official sources and 11 more optional media feeds; results and ex-dates for watchlist stocks. Full-page website with side navigation and multi-column news, richer animation on every page, new app icon and logo |
 | 1.5.0 | Nifty Next 50 and 218 F&O stock option chains with intraday charts. New look: calm, light Morning mist theme, live market tape, signal map, line icons, teal/coral up-down colours |
 | 1.4.0 | Website version from the same code. Fixes: intraday chart limited to 9:15Ã¢â‚¬â€œ15:30, undated older items no longer jump to the top, chart taps keep their reading |
 | 1.3.0 | Bottom tabs (News Ã‚Â· Insights Ã‚Â· Options Ã‚Â· Calendar Ã‚Â· Settings). **Insights:** event-risk meter, 7-day mood trend, sector heatmap with NSE sector moves, watchlist news trend. **Options:** Nifty / Bank Nifty / Fin Nifty / Midcap Nifty option chain (PCR, max pain, call/put walls, OI build-up, ATM IV, implied move) and intraday indicators (EMA 9/21, RSI 14, Supertrend, opening range, day range) with a touch chart. Colour-blind-safe blue/red up/down colours |
