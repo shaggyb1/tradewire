@@ -23,6 +23,7 @@ export async function GET(request: Request) {
   }
   const results = await Promise.all(ids.map((id) => read(SOURCE_BY_ID[id].url)));
   return Response.json(Object.fromEntries(ids.map((id, i) => [id, results[i]])), {
-    headers: { 'Cache-Control': 'public, max-age=30' },
+    // Never cache a reply containing a failure, or a brief glitch would linger
+    headers: { 'Cache-Control': results.some((r) => r.error) ? 'no-store' : 'public, max-age=30' },
   });
 }

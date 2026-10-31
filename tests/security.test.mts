@@ -51,6 +51,7 @@ test('batch route returns each feed, and reports one failure without losing the 
   const j = await r.json();
   assert.equal(j['rbi-pr'].text, '<rss/>');
   assert.equal(j.sebi.error, 'unreachable');
+  assert.equal(r.headers.get('cache-control'), 'no-store');
   assert.equal(calls.length, 2);
 });
 

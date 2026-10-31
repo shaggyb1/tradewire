@@ -45,7 +45,8 @@ async function sendBatch(batch: Waiter[]) {
     for (const w of batch) {
       const r = data[w.id];
       if (r?.text != null) w.resolve(r.text);
-      else w.reject(new Error(r?.error ?? 'No data'));
+      // Most failures are brief, so try this one feed again straight away
+      else fetchOne(w.id).then(w.resolve, w.reject);
     }
   } catch (e) {
     if (e instanceof Error && e.message.startsWith('Too many')) {
