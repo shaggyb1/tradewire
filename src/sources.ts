@@ -16,12 +16,14 @@ export interface Source {
   undated?: boolean;
   /** Shown in the feed, but too far from Indian markets to count towards impact or bullish/bearish signals */
   minor?: boolean;
+  /** Refuses the website's hosting network (HTTP 403), so only the phone app, which connects directly, can read it */
+  phoneOnly?: boolean;
   /** Max items kept from this feed per refresh */
   max?: number;
 }
 
 // Every URL below was checked to return a live RSS feed.
-export const SOURCES: Source[] = [
+const ALL_SOURCES: Source[] = [
   // India — official
   { id: 'rbi-pr', name: 'RBI Press Releases', short: 'RBI', url: 'https://www.rbi.org.in/pressreleases_rss.xml', region: 'India', kind: 'Central Bank', official: true, tz: '+0530' },
   { id: 'rbi-notif', name: 'RBI Notifications', short: 'RBI', url: 'https://www.rbi.org.in/notifications_rss.xml', region: 'India', kind: 'Central Bank', official: true, tz: '+0530' },
@@ -52,7 +54,7 @@ export const SOURCES: Source[] = [
   { id: 'rbnz', name: 'Reserve Bank of New Zealand', short: 'RBNZ', url: 'https://www.rbnz.govt.nz/feeds/news', region: 'Global', kind: 'Central Bank', official: true, tz: 'GMT', max: 20, minor: true },
   { id: 'snb', name: 'Swiss National Bank', short: 'SNB', url: 'https://www.snb.ch/public/en/rss/pressrel', region: 'Global', kind: 'Central Bank', official: true, tz: 'CET', minor: true },
   { id: 'cftc', name: 'US CFTC', short: 'CFTC', url: 'https://www.cftc.gov/RSS/RSSGP/rssgp.xml', region: 'Global', kind: 'Regulator', official: true, tz: 'EST', minor: true },
-  { id: 'wto', name: 'World Trade Organization', short: 'WTO', url: 'https://www.wto.org/library/rss/latest_news_e.xml', region: 'Global', kind: 'Government', official: true, tz: 'GMT', minor: true },
+  { id: 'wto', name: 'World Trade Organization', short: 'WTO', url: 'https://www.wto.org/library/rss/latest_news_e.xml', region: 'Global', kind: 'Government', official: true, tz: 'GMT', minor: true, phoneOnly: true },
 
   // Media — off by default, faster but not official
   { id: 'bl', name: 'BusinessLine Markets', short: 'BL', url: 'https://www.thehindubusinessline.com/markets/feeder/default.rss', region: 'India', kind: 'Media', official: false, tz: '+0530', max: 30 },
@@ -72,6 +74,8 @@ export const SOURCES: Source[] = [
   { id: 'bbc-biz', name: 'BBC Business', short: 'BBC', url: 'https://feeds.bbci.co.uk/news/business/rss.xml', region: 'Global', kind: 'Media', official: false, tz: 'GMT' },
   { id: 'bbc-world', name: 'BBC World', short: 'BBC', url: 'https://feeds.bbci.co.uk/news/world/rss.xml', region: 'Global', kind: 'Media', official: false, tz: 'GMT' },
 ];
+
+export const SOURCES = ALL_SOURCES.filter((s) => !(s.phoneOnly && process.env.EXPO_OS === 'web'));
 
 export const SOURCE_BY_ID: Record<string, Source> = Object.fromEntries(SOURCES.map((s) => [s.id, s]));
 
