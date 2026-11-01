@@ -1,44 +1,85 @@
 # TradeWire
 
-Live market news for Indian traders, straight from official sources: RBI, SEBI, PIB, NSE, BSE, the US Fed, ECB, Bank of England, Bank of Japan, US SEC and US EIA. Optional media feeds can be switched on in Settings.
+Market news for Indian traders, read directly from official sources.
 
-Each headline is tagged High / Medium / Low impact with the sectors that usually react, plus a Ã¢â€“Â² Bullish / Ã¢â€“Â¼ Bearish / Ã¢â€”â€  Mixed indicator explaining which way that kind of news typically moves Indian markets (e.g. "Rate cut Ã¢â€ â€™ +Banks, NBFCs, Realty, Autos"). A news-mood gauge totals bullish vs bearish headlines over the last 24 hours.
+I built TradeWire for my own trading, because I wanted one place for RBI, SEBI and exchange news without opening a dozen sites. It runs as an Android app and a website from the same React Native code.
 
-All tags and indicators are keyword-based triage from headline wording. They are not investment advice or buy/sell signals.
+**Website:** https://tradewire.expo.app · **Android:** download the APK from [Releases](../../releases)
 
-## Versions
+![TradeWire showing official market news, stats and a news mood gauge](docs/screenshot.jpg)
 
-| Version | What's new |
+## What it does
+
+- **Official sources:** RBI, SEBI, PIB, NSE, BSE, the US Fed, ECB, Bank of England, Bank of Japan, US SEC and US EIA. Optional media feeds can be switched on in Settings.
+- **Headline tags:** each headline gets an impact level (High, Medium or Low), the sectors that usually react, and a direction (Bullish, Bearish or Mixed). For example, a rate cut points to banks, NBFCs, realty and autos.
+- **News mood:** a gauge totals bullish and bearish headlines over the last 24 hours.
+- **Options:** option chains for Nifty, Bank Nifty, Fin Nifty, Midcap Nifty, Nifty Next 50 and 218 F&O stocks, with PCR, max pain, call and put walls, OI build-up, ATM IV and implied move.
+- **Intraday charts:** EMA 9/21, RSI 14, Supertrend, opening range and day range on a touch chart.
+- **Planning:** a market calendar, a watchlist with results and ex-dates, an event-risk meter and a sector heatmap.
+
+The tags are keyword rules based on headline wording. They are not investment advice or buy and sell signals.
+
+## How it's built
+
+| Layer | Choice |
 |---|---|
-| 1.6.0 | 13 more official sources and 11 more optional media feeds; results and ex-dates for watchlist stocks. Full-page website with side navigation and multi-column news, richer animation on every page, new app icon and logo |
-| 1.5.0 | Nifty Next 50 and 218 F&O stock option chains with intraday charts. New look: calm, light Morning mist theme, live market tape, signal map, line icons, teal/coral up-down colours |
-| 1.4.0 | Website version from the same code. Fixes: intraday chart limited to 9:15Ã¢â‚¬â€œ15:30, undated older items no longer jump to the top, chart taps keep their reading |
-| 1.3.0 | Bottom tabs (News Ã‚Â· Insights Ã‚Â· Options Ã‚Â· Calendar Ã‚Â· Settings). **Insights:** event-risk meter, 7-day mood trend, sector heatmap with NSE sector moves, watchlist news trend. **Options:** Nifty / Bank Nifty / Fin Nifty / Midcap Nifty option chain (PCR, max pain, call/put walls, OI build-up, ATM IV, implied move) and intraday indicators (EMA 9/21, RSI 14, Supertrend, opening range, day range) with a touch chart. Colour-blind-safe blue/red up/down colours |
-| 1.2.0 | Ã¢Ëœâ€¦ Watchlist, Ã°Å¸â€œâ€¦ market calendar (RBI, Fed, CPI/IIP/GDP, F&O expiries, holidays, watchlist results), app lock, hidden screen, NSE holiday-aware market status |
-| 1.1.0 | Bullish / Bearish indicator, 24h news-mood gauge |
-| 1.0.0 | First release: official feeds, impact tags, background alerts |
+| App and website | React Native, Expo, Expo Router, TypeScript |
+| Charts | SVG |
+| Android builds | EAS |
+| Data | Official feeds and NSE market data, with no database |
 
-Every version's APK stays available on the [Releases](../../releases) page.
+**Android reads feeds directly and the website uses small server routes.** The phone can fetch each feed over HTTPS, so the app needs no backend, account or analytics. Browsers can't read those feeds directly, so the website goes through the routes in `src/app/api/`.
 
-## Install (Android)
+### Where to look in the code
 
-1. Download the latest `TradeWire-*.apk` from [Releases](../../releases).
-2. Open it on your phone and allow installs from this source when Android asks.
-3. Open **TradeWire**.
+| File | What it does |
+|---|---|
+| `src/sources.ts` | The list of feeds |
+| `src/impact.ts` | Impact rules |
+| `src/tone.ts` | Bullish and bearish rules |
+| `src/nse.ts` | Option chain, intraday prices and sector indices |
+| `src/optionStats.ts` | Option chain maths |
+| `src/indicators.ts` | Intraday indicators |
+| `src/insights.ts` | Insights calculations |
+| `src/alerts.ts` | Background alerts |
+| `src/store.tsx` | Shared state |
+| `src/app/` | Screens |
+| `tests/` | Logic, security and integration tests |
 
-## Privacy
-
-No account, analytics, ads or backend server. The phone fetches each feed directly from the official site over HTTPS, and all data stays on the device. Sites you fetch from can still see your IP address; use a VPN or Orbot if you need to hide it.
-
-## Develop
+## Run it locally
 
 ```bash
 npm install
 npx expo start
 ```
 
-The website is live at https://tradewire.expo.app. Run it locally with `npx expo start --web`; browsers canÃ¢â‚¬â„¢t read the feeds directly, so it uses the server routes in `src/app/api/`. Publish it with `npx expo export --platform web` then `npx eas-cli deploy`.
+Use `npx expo start --web` for the website.
 
-Build a new APK with `npx eas-cli build -p android --profile preview`.
+To publish the website:
 
-Screens are in `src/app/` (Expo Router tabs) and shared state in `src/store.tsx`. NSE market data (option chain, intraday prices, sector indices) is read in `src/nse.ts`; option-chain maths in `src/optionStats.ts`; intraday indicators in `src/indicators.ts`; insights in `src/insights.ts`. Feeds are listed in `src/sources.ts`, impact rules in `src/impact.ts`, bullish/bearish rules in `src/tone.ts`, background alerts in `src/alerts.ts`.
+```bash
+npx expo export --platform web
+npx eas-cli deploy
+```
+
+To build an APK:
+
+```bash
+npx eas-cli build -p android --profile preview
+```
+
+## Privacy
+
+The app has no account, analytics, ads or backend server, and its data stays on the device. Sites it fetches from can still see your IP address, so use a VPN or Orbot if you need to hide it.
+
+## Version history
+
+| Version | What changed |
+|---|---|
+| 1.6.0 | 13 more official sources and 11 optional media feeds, watchlist results and ex-dates, full-page website, new icon |
+| 1.5.0 | Nifty Next 50 and 218 F&O option chains, new light theme, market tape and signal map |
+| 1.4.0 | Website from the same code. Fixed the intraday chart running outside 9:15 to 15:30, undated older items jumping to the top, and chart taps losing their reading |
+| 1.3.0 | Insights and Options tabs, index option chains, intraday indicators, colour-blind-safe up and down colours |
+| 1.2.0 | Watchlist, market calendar, app lock, hidden screen, NSE holiday-aware market status |
+| 1.1.0 | Bullish and bearish indicator, 24-hour news mood gauge |
+| 1.0.0 | First release: official feeds, impact tags, background alerts |
